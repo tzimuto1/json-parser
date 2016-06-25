@@ -1,0 +1,101 @@
+High Level API
+==============
+
+json_tree = parser(<string>)
+
+SUBSET OF JSON TO USE:
+======================
+- strings should be alphanumerals
+- numbers should only be integers
+
+GRAMMAR
+=======
+json := object | array
+
+object = {} | { members }
+members = pair | (pair , members)
+pair = string : value
+
+array = [] | [ elements ]
+elements = value | value , elements
+value = string | number | object | array | true | false | null
+
+string
+int (replace number with int)
+
+json := object | array
+
+
+SIMPLIFIED
+object = {} | { pairs (, pair)* }
+pair = string : value
+
+array = [] | [ value (, value) ]
+value = string | number | object | array | true | false | null
+
+string = "(a|b|...)*"
+int = (0|1|2...)+
+
+ABSTRACT
+
+API
+===
+
+value json_object.get(<string>)
+value json_array.get(<index>)
+
+json_array.iterator.get_next()
+
+json.to_string()
+
+- currently the created json tree should not be mutable. Only reads are possible
+
+TYPES
+=====
+json:
+    int   type;
+    int   num;
+    char *key;
+    union value {
+        json *members;
+        json *elements;
+        int   int_val; // true, false
+        char *string_value;
+    }
+
+
+object:
+    members->pair....
+
+pair:
+    string
+    value
+
+array:
+    elements->value...
+
+value = string | number | object | array | true | false | null
+
+// seems like this is the base jype
+value:
+    type [string|number etc.]
+    void *val
+
+
+str
+int
+string
+pair
+
+json_object is made from pairs
+
+CURRENTLY the json_object pairs are a linked list. Maybe do some hashing latter on
+
+LOW LEVEL DETAILS
+=================
+
+- accessor function to peek or consume a character from the json_string
+
+
+
+
