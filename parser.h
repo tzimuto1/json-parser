@@ -1,16 +1,17 @@
 #ifndef PARSER_H
 #define PARSER_H
 
+#include <stdbool.h>
 #include "json.h"
 
 typedef enum json_error
 {
     // the input string should be defined
     JSON_ERROR_UNDEFINED_INPUT,
-    JSON_ERROR_IVALID_JSON, // quite generic
-    JSON_ERROR_UNBALANCED_QOUTE,
+    JSON_ERROR_INVALID_JSON, // quite generic
+    JSON_ERROR_UNBALANCED_QUOTE,
     JSON_ERROR_UNBALANCED_BRACE,
-    JSON_ERROR_UNBALANCED_SQUARE_BRACKET
+    JSON_ERROR_UNBALANCED_SQUARE_BRACKET,
     JSON_ERROR_MISSING_OBJ_COLON,
     JSON_ERROR_INVALID_NUM_FORMAT,
     ERROR_MEMORY,
@@ -32,7 +33,7 @@ typedef struct json_parser
     int           buffer_idx;
 
     json_output  *output;
-    int           parsing_string;
+    bool          skip_space; // TODO don't like the design for this
     int           error;
 } json_parser;
 

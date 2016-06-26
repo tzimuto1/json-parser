@@ -2,6 +2,9 @@
 
 #include "parser.h"
 
+#define CHAR_IS_WHITESPACE(c)    ((c) == '\t' || (c) == '\n' || (c) == 11 || \
+                                  (c) == '\f' || (c) == '\r' || (c) == 32)
+
 /*
  * Advance forward until the next unconsumed character is no stace except when
  * parsing strings
@@ -9,7 +12,7 @@
 
 static void skip_space(json_parser *parser)
 {
-    if (!parser->parsing_string)
+    if (parser->skip_space)
     {
         while (parser->buffer_idx < parser->buffer_sz)
         {
@@ -48,10 +51,16 @@ char json_next(json_parser *parser)
 
 bool is_string_matched(json_parser *parser, char *str)
 {
+    int matched = true;
+    parser->skip_space = false;
     for (; *str; str++)
     {
         if (*str != json_next(parser))
-            return false;
+        {
+            matched = false;
+            break;
+        }
     }
-    return true;
+    parser->skip_space = true;
+    return matched;
 }

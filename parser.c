@@ -14,12 +14,15 @@ value = string | number | object | array | true | false | null
  * Source: json.org
  */
 
+#include <stdlib.h>
 #include <math.h>
 #include <ctype.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include "parser.h"
 #include "json.h"
+#include "iterator.h"
 
 
 /* static function declarations */
@@ -28,27 +31,28 @@ static json *parse_object(json_parser *);
 static json *parse_array(json_parser *);
 static json *parse_string(json_parser *);
 static json *parse_number(json_parser *);
-static json *parse_boolean(json_parser *);
+static json *parse_boolean(json_parser *, bool);
 static json *parse_null(json_parser *);
-static json *parse_pair(json_parser *);
-static json *parse_object_key(json_parser *);
+static obj_pair *parse_pair(json_parser *);
+static char *parse_object_key(json_parser *);
 static json *parse_value(json_parser *);
 
-static void  parser_destroy(json_parser *);
-static int   json_parser_init(json_parser *parser, char *json_string);
-static int   json_char_from_escaped_char(char c);
+static void  json_parser_init(json_parser *parser, const char *json_string);
+static void  json_parser_destroy(json_parser *);
+static json_output *json_output_new();
+void         json_output_destroy(json_output *jo);
+
+static int   escaped_char2actual(char c);
 
 
 /* UTILITIES */
 #define parse_true(p)            parse_boolean(p, true)
-#define parse_false(p)           parser_boolean(p, false)
+#define parse_false(p)           parse_boolean(p, false)
 
 #define CHAR2NUM(c)              ((c) - '0')
 #define IS_CONTROL_CHAR(c)       ((c) < 33 ||  (c) == 127)
-#define CHAR_IS_WHITESPACE(c)    ((c) == '\t' || (c) == '\n' || (c) == 11 || \
-                                  (c) == '\f' || (c) == '\r' || (c) == 32)
 
-static int json_char_from_escaped_char(char c)
+static int escaped_char2actual(char c)
 {
     switch (c)
     {
@@ -88,7 +92,6 @@ static int json_char_from_escaped_char(char c)
  * grammar:
  *  value = string | number | object | array | true | false | null
 */
-
 static json *parse_value(json_parser *parser)
 {
     // The error treatment will be done by the corresponding parser_* functions
@@ -127,12 +130,12 @@ static json *parse_value(json_parser *parser)
     return value;
 }
 
+
 /*
  * Parse a null value
  * grammar:
  *  null = null (that's so meta!)
 */
-
 static json *parse_null(json_parser *parser)
 {
     if (is_string_matched(parser, "null"))
@@ -140,7 +143,7 @@ static json *parse_null(json_parser *parser)
         json *null_obj = json_create(JSON_TYPE_BOOLEAN);
         return null_obj;
     }
-ERROR:
+
     parser->error = JSON_ERROR_INVALID_JSON;
     return NULL;
 }
@@ -155,13 +158,14 @@ ERROR:
 static json *parse_boolean(json_parser *parser, bool bool_val)
 {
     char *bool_str = (bool_val) ? "true" : "false";
+    json *bool_obj = NULL;
     if (is_string_matched(parser, bool_str))
     {
-        json *bool_obj = json_create(JSON_TYPE_BOOLEAN);
-        bool_obj->bool_val = bool_val
+        bool_obj = json_create(JSON_TYPE_BOOLEAN);
+        bool_obj->bool_val = bool_val;
         return bool_obj;
     }
-ERROR:
+
     parser->error = JSON_ERROR_INVALID_JSON;
     return NULL;
 }
@@ -185,7 +189,6 @@ ERROR:
  * [<sign_part>] (no_leading_zero)<integer_part> [<decimal_point> <fraction_part>] 
  * [<E/e_symbol> [<sign_part>] <exponent_part>]
  */
-
 static json *parse_number(json_parser *parser)
 {
     char    c;
@@ -201,6 +204,8 @@ static json *parse_number(json_parser *parser)
         base_sign = -1;
         json_next(parser);
     }
+
+    parser->skip_space = false;
 
     /* process integer part */
     if (!isdigit(json_peek(parser)))
@@ -241,7 +246,7 @@ static json *parse_number(json_parser *parser)
     }
 
     /* process the exponent part */
-    c = json_peek(parser)
+    c = json_peek(parser);
     if (c == 'E' || c == 'e') {
         json_next(parser);
 
@@ -249,13 +254,13 @@ static json *parse_number(json_parser *parser)
         // deal with the sign and consume it
         if (c == '-')
         {
+            json_next(parser);
             exp_sign = -1;
-            c = json_next(parser);
         }
         else if (c == '+')
         {
-            exp_sign = 1; // unnecessary, really, just for uniformity sake
             json_next(parser);
+            exp_sign = 1; // unnecessary, really, just for uniformity sake
         }
 
         if (!isdigit(json_peek(parser)))
@@ -269,10 +274,9 @@ static json *parse_number(json_parser *parser)
             c = json_next(parser);
             exponent = exponent * 10 + CHAR2NUM(c);
         }
-        exponent *= exp_sign;
     }
 
-DONE:
+    parser->skip_space = true;
     /* now wrap up everything */
     number->num_val = num_value * base_sign * pow(10, exp_sign * exponent);
     return number;
@@ -293,8 +297,7 @@ ERROR:
  *           \" | \\ | \/ | \b | \f | \n | \r | \t | \u four-hex-digits
  *  control_character = charatcer from 0-32 and 127
  * TODO currently supposet 0-127
-*/
-
+m*/
 static json *parse_string(json_parser *parser)
 {
     json *string = NULL;
@@ -302,48 +305,35 @@ static json *parse_string(json_parser *parser)
     {
         char c;
 
-        parser->parse_string = 1;
+        parser->skip_space = false;
         string = json_create(JSON_TYPE_STRING);
 
         if (json_peek(parser) == '"')
         {
             json_next(parser);
-            parser->parse_string = 0;
+            parser->skip_space = true;
             return string;
         }
 
         while ((c = json_next(parser)) != '"' && !IS_CONTROL_CHAR(c))
         {
-            // TODO handle this carefully
-            if ((string->cnt == string->alloced - 1 )|| 
-                (string->cnt == string->alloced))
+            if (string->cnt >= string->alloced - 1 )
             {
                 string->alloced += 10;
-                char *temp = (char *) realloc(string->string_val, 
-                    sizeof(char) * array->alloced);
-
-                if (!temp)
-                {
-                    parser->error = ERROR_MEMORY;
-                    goto ERROR;
-                }
-
-                string->string_val = temp;
+                string->string_val = (char *) realloc(string->string_val, 
+                    sizeof(char) * string->alloced);
             }
 
             if (c == '\\')
             {
-                if ((c = json_char_from_escaped_char(
-                    json_next(parser))) < 0)
+                if ((c = escaped_char2actual(json_next(parser))) < 0)
                     goto ERROR;
             }
 
             string->string_val[string->cnt++] = c;
         }
 
-        string->string_val[string->cnt++] = '\0';
-
-        parser->parse_string = 0;
+        string->string_val[string->cnt++] = '\0'; // is null termination necessary?
 
         if (c != '"')
         {
@@ -351,7 +341,12 @@ static json *parse_string(json_parser *parser)
             goto ERROR;
         }
         
+        parser->skip_space = true;
         return string;
+    }
+    else 
+    {
+        parser->error = JSON_ERROR_INVALID_JSON;
     }
 
 ERROR:
@@ -359,12 +354,12 @@ ERROR:
     return NULL;
 }
 
+
 /*
  * parser an array
  * grammar:
  *  array = [] | [ value (, value)... ]
  */
-
 static json *parse_array(json_parser *parser)
 {
     json *array = NULL;
@@ -384,30 +379,19 @@ static json *parse_array(json_parser *parser)
         if (!(value = parse_value(parser)))
             goto ERROR;
 
-        array->elements[array->cnt++] = value;
-
-        while ((c = json_next(parser)) == ',') 
-        {
+        do {
             if (array->cnt == array->alloced)
             {
                 array->alloced += 10;
-                json *temp = (json *) realloc(array->elements, 
+                array->elements = (json **) realloc(array->elements, 
                     sizeof(json *) * array->alloced);
-
-                if (!temp)
-                {
-                    parser->error = ERROR_MEMORY;
-                    goto ERROR;
-                }
-                
-                array->elements = temp;
             }
 
             if (!(value = parse_value(parser)))
                 goto ERROR;
 
             array->elements[array->cnt++] = value;
-        }
+        } while ((c = json_next(parser)) == ',');
 
         if (c != ']')
         {
@@ -417,6 +401,10 @@ static json *parse_array(json_parser *parser)
         
         return array;
     }
+    else
+    {
+        parser->error = JSON_ERROR_INVALID_JSON;
+    }
 
 ERROR:
     json_destroy(array);
@@ -424,13 +412,13 @@ ERROR:
 }
 
 // helper to parse_pair
-static char* parser_object_key(json_parser *parser)
+static char *parse_object_key(json_parser *parser)
 {
     char *key    = NULL;
     json *string = parse_string(parser);
 
     if (string)
-        key = strdup(string.string_val);
+        key = strdup(string->string_val);
 
     json_destroy(string);
     return key;
@@ -441,7 +429,6 @@ static char* parser_object_key(json_parser *parser)
  * grammar:
  *   pair = string : value
  */
-
 static obj_pair *parse_pair(json_parser *parser)
 {
     obj_pair *pair = NULL;
@@ -463,6 +450,10 @@ static obj_pair *parse_pair(json_parser *parser)
 
         return pair;
     }
+    else
+    {
+        parser->error = JSON_ERROR_INVALID_JSON;
+    }   
 
 ERROR:
     free(pair);
@@ -471,7 +462,12 @@ ERROR:
     return NULL;
 }
 
-// object = {} | { pair (, pair) }
+
+/*
+ * parse an object
+ * grammar:
+ *  object = {} | { pair (, pair) }
+ */
 static json *parse_object(json_parser *parser)
 {
     json *object = NULL;
@@ -491,30 +487,19 @@ static json *parse_object(json_parser *parser)
         if (!(pair = parse_pair(parser)))
             goto ERROR;
 
-        object->members[object->cnt++] = pair;
-
-        while ((c = json_next(parser)) == ',') 
-        {
+        do {
             if (object->cnt == object->alloced)
             {
                 object->alloced += 10;
-                obj_pair **temp = (obj_pair **) realloc(object->members, 
+                object->members = (obj_pair **) realloc(object->members, 
                     sizeof(obj_pair *) * object->alloced);
-
-                if (!temp)
-                {
-                    parser->error = ERROR_MEMORY;
-                    goto ERROR;
-                }
-
-                object->members = temp;
             }
 
             if (!(pair = parse_pair(parser)))
                 goto ERROR;
 
             object->members[object->cnt++] = pair;
-        };
+        } while ((c = json_next(parser)) == ',');
 
         if (c != '}')
         {
@@ -523,6 +508,10 @@ static json *parse_object(json_parser *parser)
         }
 
         return object;
+    }
+    else
+    {
+        parser->error = JSON_ERROR_INVALID_JSON;
     }
 
 ERROR:
@@ -536,44 +525,69 @@ ERROR:
 */
 json_output *json_parse(const char *json_string)
 {
-    json_parser  parser;
-    if (!json_parser_init(&parser, json_string))
-        return NULL;
+    json_parser   parser;
+    json_output  *output;
+
+    output = json_output_new();
+
+    if (!json_string)
+        return output;
+
+    json_parser_init(&parser, json_string);
 
     switch (json_peek(&parser))
     {
         case '{':
-            parser.output->tree = parse_object(&parser);
+            output->root  = parse_object(&parser);
+            output->error = parser.error;
             break;
         case '[':
-            parser.output->tree = parse_array(&parser);
+            output->root  = parse_array(&parser);
+            output->error = parser.error;
             break;
         default:
-            parser.output->error = JSON_ERROR_INVALID_JSON;
+            output->error = JSON_ERROR_INVALID_JSON;
             break;
     }
-    parser_destroy(parser);
-    return parser.output;
+    json_parser_destroy(&parser);
+    return output;
 }
 
 
-static int json_parser_init(json_parser *parser, char *json_string)
+static void json_parser_init(json_parser *parser, const char *json_string)
 {
-    if (!json_string)
-        return 0;
-
     parser->buffer = strdup(json_string);
     parser->buffer_sz = strlen(json_string) + 1;
     parser->buffer_idx = 0;
-    parser->output = (json_output *) calloc(1, sizeof(json_output));
-    parser->parsing_string = 0;
-    parser->error = 0;
-    return 1;
+    parser->skip_space = true;
 }
 
-static void parser_destroy(json_parser *parser)
+
+static void json_parser_destroy(json_parser *parser)
 {
     free(parser->buffer);
-    free(parser);
 }
 
+
+static json_output *json_output_new()
+{
+    json_output *output;
+
+    output = (json_output *) calloc(1, sizeof(json_output));
+    output->root  = NULL;
+    output->error = 0;
+    return output;
+}
+
+
+void json_output_destroy(json_output *jo)
+{
+    json_destroy(jo->root);
+    free(jo);
+}
+
+
+int main(int argc, char *argv[])
+{
+    return 0;
+}

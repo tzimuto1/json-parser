@@ -2,6 +2,8 @@
 /*
  * Memory management for the json objects
 */
+
+#include <stdlib.h>
 #include <assert.h>
 #include "json.h"
 
@@ -9,19 +11,21 @@
  * Create a json object given the type of the object
 */
 
- json *json_create(json_type type)
- {
+json *json_create(json_type type)
+{
     assert(type <= JSON_TYPE_NONE || type >= JSON_TYPE_END);
 
     json *js = calloc(1, sizeof(json));
     js->type = type;
-    return type;
- }
+    return js;
+}
 
- /*
-  * Destoy json object based on type
-  */
-void json_free(json *js)
+
+/*
+ * Destoy json object based on type
+ */
+
+void json_destroy(json *js)
 {
     if (!js)
         return;
@@ -31,12 +35,12 @@ void json_free(json *js)
         case JSON_TYPE_OBJECT:
         {
             int        i;
-            json_pair *pair;
+            obj_pair  *pair;
             for (i = 0; i < js->cnt; i++)
             {
                 pair = js->members[i];
                 free(pair->key);
-                json_free(pair->value);
+                json_destroy(pair->value);
                 free(pair);
             }
             free(js->members);
@@ -48,7 +52,7 @@ void json_free(json *js)
         {
             int i;
             for (i = 0; i < js->cnt; i++)
-                json_free(js->elements[i]);
+                json_destroy(js->elements[i]);
             free(js->elements);
             free(js);
             break;
