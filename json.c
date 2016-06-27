@@ -13,7 +13,7 @@
 
 json *json_create(json_type type)
 {
-    assert(type <= JSON_TYPE_NONE || type >= JSON_TYPE_END);
+    assert(type > JSON_TYPE_NONE || type < JSON_TYPE_END);
 
     json *js = calloc(1, sizeof(json));
     js->type = type;

@@ -14,6 +14,7 @@ value = string | number | object | array | true | false | null
  * Source: json.org
  */
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <ctype.h>
@@ -23,6 +24,7 @@ value = string | number | object | array | true | false | null
 #include "parser.h"
 #include "json.h"
 #include "iterator.h"
+#include "utils.h"
 
 
 /* static function declarations */
@@ -50,7 +52,7 @@ static int   escaped_char2actual(char c);
 #define parse_false(p)           parse_boolean(p, false)
 
 #define CHAR2NUM(c)              ((c) - '0')
-#define IS_CONTROL_CHAR(c)       ((c) < 33 ||  (c) == 127)
+#define IS_CONTROL_CHAR(c)       ((c) < 32 ||  (c) == 127)
 
 static int escaped_char2actual(char c)
 {
@@ -94,11 +96,12 @@ static int escaped_char2actual(char c)
 */
 static json *parse_value(json_parser *parser)
 {
+    LOGFUNC();
     // The error treatment will be done by the corresponding parser_* functions
 
     json *value = NULL;
     char  c = json_peek(parser);
-    
+
     switch (c)
     {
         case '{':
@@ -138,6 +141,7 @@ static json *parse_value(json_parser *parser)
 */
 static json *parse_null(json_parser *parser)
 {
+    LOGFUNC();
     if (is_string_matched(parser, "null"))
     {
         json *null_obj = json_create(JSON_TYPE_BOOLEAN);
@@ -157,6 +161,7 @@ static json *parse_null(json_parser *parser)
 
 static json *parse_boolean(json_parser *parser, bool bool_val)
 {
+    LOGFUNC();
     char *bool_str = (bool_val) ? "true" : "false";
     json *bool_obj = NULL;
     if (is_string_matched(parser, bool_str))
@@ -191,6 +196,7 @@ static json *parse_boolean(json_parser *parser, bool bool_val)
  */
 static json *parse_number(json_parser *parser)
 {
+    LOGFUNC();
     char    c;
     int     base_sign = 1;
     int     exp_sign = 1;
@@ -300,6 +306,7 @@ ERROR:
 m*/
 static json *parse_string(json_parser *parser)
 {
+    LOGFUNC();
     json *string = NULL;
     if (json_next(parser) == '"')
     {
@@ -362,6 +369,7 @@ ERROR:
  */
 static json *parse_array(json_parser *parser)
 {
+    LOGFUNC();
     json *array = NULL;
     if (json_next(parser) == '[')
     {
@@ -375,9 +383,6 @@ static json *parse_array(json_parser *parser)
             json_next(parser);
             return array;
         }
-        
-        if (!(value = parse_value(parser)))
-            goto ERROR;
 
         do {
             if (array->cnt == array->alloced)
@@ -414,6 +419,7 @@ ERROR:
 // helper to parse_pair
 static char *parse_object_key(json_parser *parser)
 {
+    LOGFUNC();
     char *key    = NULL;
     json *string = parse_string(parser);
 
@@ -431,6 +437,7 @@ static char *parse_object_key(json_parser *parser)
  */
 static obj_pair *parse_pair(json_parser *parser)
 {
+    LOGFUNC();
     obj_pair *pair = NULL;
     json     *value = NULL;
     char     *key = NULL;
@@ -470,6 +477,7 @@ ERROR:
  */
 static json *parse_object(json_parser *parser)
 {
+    LOGFUNC();
     json *object = NULL;
     if (json_next(parser) == '{')
     {
@@ -483,9 +491,6 @@ static json *parse_object(json_parser *parser)
             json_next(parser);
             return object;
         }
-
-        if (!(pair = parse_pair(parser)))
-            goto ERROR;
 
         do {
             if (object->cnt == object->alloced)
@@ -533,6 +538,8 @@ json_output *json_parse(const char *json_string)
     if (!json_string)
         return output;
 
+    //PRINTLN("Parsing string: %s", json_string);
+
     json_parser_init(&parser, json_string);
 
     switch (json_peek(&parser))
@@ -560,6 +567,7 @@ static void json_parser_init(json_parser *parser, const char *json_string)
     parser->buffer_sz = strlen(json_string) + 1;
     parser->buffer_idx = 0;
     parser->skip_space = true;
+    parser->error = 0;
 }
 
 
@@ -586,8 +594,27 @@ void json_output_destroy(json_output *jo)
     free(jo);
 }
 
-
+#ifndef TEST_MODE
 int main(int argc, char *argv[])
 {
+    LOGFUNC();
+    json_output *jo = json_parse("{\"msg\":\"Hello, World\"}");
+    if (jo->error)
+    {
+        printf("Error happened : %d\n", jo->error);
+    }
+    else 
+    {
+        json *r = jo->root;
+        if (!r)
+        {
+            printf("NULL ROOT\n");
+        }
+        else
+        {
+            printf("JSON VALUE OF TYPE %d\n", r->type);
+        }
+    }
     return 0;
 }
+#endif // TEST_MODE

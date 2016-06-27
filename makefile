@@ -1,4 +1,4 @@
-CFLAGS=-Wall -g
+CFLAGS=-Wall -g -DDEBUG
 objects = parser.o json.o iterator.o
 
 all : $(objects)
@@ -12,4 +12,5 @@ iterator.o : iterator.h
 
 .PHONY : clean
 clean :
-	rm -fr *.o tson
+	-rm *.o tson
+	

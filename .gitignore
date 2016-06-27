@@ -1,3 +1,5 @@
 TODO.txt
 *.o
+*.a
 tson
+tests/*test
