@@ -97,5 +97,71 @@ LOW LEVEL DETAILS
 - accessor function to peek or consume a character from the json_string
 
 
+API METHODS
+===========
+
+CRUD
+
+JSON Object API
+---------------
+C
+json_create()
+
+R
+json_object_has_key()
+json_object_has_number()
+json_object_has_string()
+json_object_get_all_keys()
+json_object_get()
+json_object_get_all()
+json_object_get_number()
+json_object_get_numbers()
+json_object_get_bool()
+json_object_get_bools()
+json_object_get_string()
+json_object_get_strings()
+json_object_get_length() / json_value_get_length()
+json_object_is_empty()
+json_object_stringify() / json_value_stringify()
+
+U
+json_object_put_value()
+json_object_put_number()
+json_object_put_string()
+json_object_remove_member()
+
+D
+json_destroy()
+
+JSON Array API
+--------------
+C
+json_create()
+
+R
+json_array_has_number()
+json_array_has_string()
+json_array_get()
+json_array_get_number()
+json_array_get_numbers()
+json_array_get_bool()
+json_array_get_bools()
+json_array_get_string()
+json_array_get_strings()
+json_array_index_of_number()
+json_array_index_of_string()
+json_array_stringify() / json_value_stringify()
+json_array_is_empty()
+
+U
+json_array_set_value_at()
+json_array_set_remove_element_at()
+
+D
+json_destroy()
+
+
+
+
 
 

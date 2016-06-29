@@ -17,7 +17,7 @@ CXXFLAGS += -g -Wall -Wextra -pthread -DTEST_MODE
 
 # All tests produced by this Makefile.  Remember to add new tests you
 # created to the list.
-TESTS = iterator_test
+TESTS = iterator_test parser_test
 
 # All Google Test headers.  Usually you shouldn't change this
 # definition.
@@ -66,4 +66,17 @@ iterator_test.o : iterator_test.cpp $(GTEST_HEADERS)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c iterator_test.cpp
 
 iterator_test : iterator_test.o iterator.o gtest_main.a
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $^ -o $@
+
+
+json.o : $(USER_DIR)/json.c $(USER_DIR)/json.h $(GTEST_HEADERS)
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_DIR)/json.c
+
+parser.o : $(USER_DIR)/parser.c $(USER_DIR)/parser.h $(GTEST_HEADERS)
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_DIR)/parser.c
+
+parser_test.o : parser_test.cpp $(GTEST_HEADERS)
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c parser_test.cpp
+
+parser_test : parser_test.o parser.o json.o iterator.o gtest_main.a
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $^ -o $@

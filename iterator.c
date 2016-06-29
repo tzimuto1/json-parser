@@ -49,7 +49,7 @@ char json_next(json_parser *parser)
         ? parser->buffer[parser->buffer_idx++] : '\0';
 }
 
-bool is_string_matched(json_parser *parser, char *str)
+bool is_string_matched(json_parser *parser, const char *str)
 {
     int matched = true;
     parser->skip_space = false;

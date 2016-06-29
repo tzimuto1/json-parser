@@ -144,7 +144,7 @@ static json *parse_null(json_parser *parser)
     LOGFUNC();
     if (is_string_matched(parser, "null"))
     {
-        json *null_obj = json_create(JSON_TYPE_BOOLEAN);
+        json *null_obj = json_create(JSON_TYPE_NULL);
         return null_obj;
     }
 
@@ -162,7 +162,7 @@ static json *parse_null(json_parser *parser)
 static json *parse_boolean(json_parser *parser, bool bool_val)
 {
     LOGFUNC();
-    char *bool_str = (bool_val) ? "true" : "false";
+    const char *bool_str = (bool_val) ? "true" : "false";
     json *bool_obj = NULL;
     if (is_string_matched(parser, bool_str))
     {
@@ -223,7 +223,7 @@ static json *parse_number(json_parser *parser)
     c = json_next(parser);
 
     // make sure that there are no leading zeros
-    if (c == '0' && json_peek(parser) != '.')
+    if (c == '0' && isdigit(json_peek(parser)))
     {
         parser->error = JSON_ERROR_INVALID_NUM_FORMAT;
         goto ERROR;
@@ -443,7 +443,7 @@ static obj_pair *parse_pair(json_parser *parser)
     char     *key = NULL;
 
     pair = (obj_pair *) calloc(1, sizeof(obj_pair));
-    
+
     if (!(key = parse_object_key(parser)))
         goto ERROR;
 

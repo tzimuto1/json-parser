@@ -7,7 +7,7 @@
 typedef enum json_error
 {
     // the input string should be defined
-    JSON_ERROR_UNDEFINED_INPUT,
+    JSON_ERROR_NONE,
     JSON_ERROR_INVALID_JSON, // quite generic
     JSON_ERROR_UNBALANCED_QUOTE,
     JSON_ERROR_UNBALANCED_BRACE,
@@ -39,6 +39,7 @@ typedef struct json_parser
 
 
 json_output *json_parse(const char *json_string);
+void         json_output_destroy(json_output *jo);
 
 #endif // PARSER_H
 
