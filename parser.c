@@ -242,6 +242,13 @@ static json *parse_number(json_parser *parser)
     {
         json_next(parser);
 
+        // decimal point MUST be followed by a digit
+        if (!isdigit(json_peek(parser)))
+        {
+            parser->error = JSON_ERROR_INVALID_NUM_FORMAT;
+            goto ERROR;
+        }
+
         double coeff = .1;
         while (isdigit(json_peek(parser)))
         {
@@ -551,6 +558,8 @@ json_output *json_parse(const char *json_string)
         case '[':
             output->root  = parse_array(&parser);
             output->error = parser.error;
+            break;
+        case '\0':
             break;
         default:
             output->error = JSON_ERROR_INVALID_JSON;

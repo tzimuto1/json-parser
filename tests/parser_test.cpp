@@ -5,7 +5,7 @@
  * List of tests
  * INCORRECT STARTING INPUT
  *  - [DONE]NULL input
- *  - [empty input
+ *  - [DONE]empty input
  *  - [DONE]primitives: number, boolean, string
  * ARRAY
  *  - [DONE]empty array
@@ -27,6 +27,7 @@
  */
 
 
+/* BASIC */
 TEST(parserTest, null_input)
 {
     const char  *json_str = NULL;
@@ -40,7 +41,20 @@ TEST(parserTest, null_input)
 }
 
 
-TEST(parserTest, primitives)
+TEST(parserTest, empty_input)
+{
+    const char  *json_str = "    ";
+    json_output *output = json_parse(json_str);
+
+    ASSERT_NE((json_output *) NULL, output);
+    ASSERT_EQ(NULL, output->root);
+    ASSERT_EQ(JSON_ERROR_NONE, output->error);
+
+    json_output_destroy(output);
+}
+
+
+TEST(parserTest, general_primitives)
 {
     int          i = 0;
     const char  *primitives[] = { "3.14", "true", "false", "\"json\"" };
@@ -57,6 +71,55 @@ TEST(parserTest, primitives)
         json_output_destroy(output);
     } 
 }
+
+
+/* NUMBERS */
+typedef struct num_info
+{
+    double      num;
+    const char *num_arr;
+    json_error  error;
+} num_info;
+
+class NumberTest : public ::testing::TestWithParam<num_info> {
+
+};
+
+TEST_P(NumberTest, numbers)
+{
+    json_output *output = NULL;
+    num_info     info = GetParam();
+
+    output = json_parse(info.num_arr);
+    ASSERT_EQ(info.error, output->error);
+
+    if (output->error == JSON_ERROR_NONE)
+    {
+        ASSERT_EQ(info.num, output->root->elements[0]->num_val);
+    }
+
+    json_output_destroy(output);
+}
+
+INSTANTIATE_TEST_CASE_P(parserTests,
+    NumberTest,
+    ::testing::Values(
+        num_info{0,    "[0]",       JSON_ERROR_NONE},
+        num_info{3,    "[3]",       JSON_ERROR_NONE},
+        num_info{-3,   "[-3]",      JSON_ERROR_NONE},
+        num_info{0.1,  "[0.1]",     JSON_ERROR_NONE},
+        num_info{3.1,  "[3.1]",     JSON_ERROR_NONE},
+        num_info{300,  "[3e2]",     JSON_ERROR_NONE},
+        num_info{3000, "[3e+3]",    JSON_ERROR_NONE},
+        num_info{30,   "[300E-1]",  JSON_ERROR_NONE},
+        num_info{-30,  "[-300E-1]", JSON_ERROR_NONE},
+        num_info{-300,  "[-300E-0]",JSON_ERROR_NONE},
+        num_info{0,    "[03]",      JSON_ERROR_INVALID_NUM_FORMAT},
+        num_info{0,    "[.1]",      JSON_ERROR_INVALID_JSON},
+        num_info{0,    "[3.]",      JSON_ERROR_INVALID_NUM_FORMAT},
+        num_info{0,    "[3. 1]",    JSON_ERROR_INVALID_NUM_FORMAT},
+        num_info{0,    "[3e]",      JSON_ERROR_INVALID_NUM_FORMAT}
+        ));
 
 
 /* ARRAYS */
