@@ -6,7 +6,12 @@
  * INCORRECT STARTING INPUT
  *  - [DONE]NULL input
  *  - [DONE]empty input
- *  - [DONE]primitives: number, boolean, string
+ *  - [DONE]primitives: number, boolean, string, null
+ * NUMBER TESTS
+ *  - [DONE]
+ * STRING TESTS
+ *  - simple string
+ *  - strings with control characters
  * ARRAY
  *  - [DONE]empty array
  *  - [DONE]simple array with number, string, null, true, false
@@ -22,7 +27,6 @@
  *  - [DONE]incorrect object: key not a string
  * HYBRID
  *  - [DONE]nested
- *  - complex strings that have control characters
  *  - e.g incorrect array followed by invalid json input
  */
 
@@ -95,6 +99,7 @@ TEST_P(NumberTest, numbers)
 
     if (output->error == JSON_ERROR_NONE)
     {
+        ASSERT_EQ(JSON_TYPE_NUMBER, output->root->elements[0]->type);
         ASSERT_EQ(info.num, output->root->elements[0]->num_val);
     }
 
@@ -104,21 +109,69 @@ TEST_P(NumberTest, numbers)
 INSTANTIATE_TEST_CASE_P(parserTests,
     NumberTest,
     ::testing::Values(
-        num_info{0,    "[0]",       JSON_ERROR_NONE},
-        num_info{3,    "[3]",       JSON_ERROR_NONE},
-        num_info{-3,   "[-3]",      JSON_ERROR_NONE},
-        num_info{0.1,  "[0.1]",     JSON_ERROR_NONE},
-        num_info{3.1,  "[3.1]",     JSON_ERROR_NONE},
-        num_info{300,  "[3e2]",     JSON_ERROR_NONE},
-        num_info{3000, "[3e+3]",    JSON_ERROR_NONE},
-        num_info{30,   "[300E-1]",  JSON_ERROR_NONE},
-        num_info{-30,  "[-300E-1]", JSON_ERROR_NONE},
-        num_info{-300,  "[-300E-0]",JSON_ERROR_NONE},
-        num_info{0,    "[03]",      JSON_ERROR_INVALID_NUM_FORMAT},
-        num_info{0,    "[.1]",      JSON_ERROR_INVALID_JSON},
-        num_info{0,    "[3.]",      JSON_ERROR_INVALID_NUM_FORMAT},
-        num_info{0,    "[3. 1]",    JSON_ERROR_INVALID_NUM_FORMAT},
-        num_info{0,    "[3e]",      JSON_ERROR_INVALID_NUM_FORMAT}
+        num_info{ 0,    "[0]",       JSON_ERROR_NONE },
+        num_info{ 3,    "[3]",       JSON_ERROR_NONE },
+        num_info{ -3,   "[-3]",      JSON_ERROR_NONE },
+        num_info{ 0.1,  "[0.1]",     JSON_ERROR_NONE },
+        num_info{ 3.1,  "[3.1]",     JSON_ERROR_NONE },
+        num_info{ 300,  "[3e2]",     JSON_ERROR_NONE },
+        num_info{ 3000, "[3e+3]",    JSON_ERROR_NONE },
+        num_info{ 30,   "[300E-1]",  JSON_ERROR_NONE },
+        num_info{ -30,  "[-300E-1]", JSON_ERROR_NONE },
+        num_info{ -300, "[-300E-0]", JSON_ERROR_NONE },
+        num_info{ 0,    "[03]",      JSON_ERROR_INVALID_NUM_FORMAT },
+        num_info{ 0,    "[.1]",      JSON_ERROR_INVALID_JSON },
+        num_info{ 0,    "[3.]",      JSON_ERROR_INVALID_NUM_FORMAT },
+        num_info{ 0,    "[3. 1]",    JSON_ERROR_INVALID_NUM_FORMAT },
+        num_info{ 0,    "[3e]",      JSON_ERROR_INVALID_NUM_FORMAT }
+        ));
+
+
+/* STRINGS */
+typedef struct str_info
+{
+    const char *str;
+    const char *str_arr;
+    json_error  error;
+} str_info;
+
+class StringTest : public ::testing::TestWithParam<str_info> {
+
+};
+
+TEST_P(StringTest, strings)
+{
+    json_output *output = NULL;
+    str_info     info = GetParam();
+
+    output = json_parse(info.str_arr);
+    ASSERT_EQ(info.error, output->error);
+
+    if (output->error == JSON_ERROR_NONE)
+    {
+        ASSERT_EQ(JSON_TYPE_STRING, output->root->elements[0]->type);
+        ASSERT_STREQ(info.str, output->root->elements[0]->string_val);
+    }
+
+    json_output_destroy(output);
+}
+ 
+INSTANTIATE_TEST_CASE_P(parserTests,
+    StringTest,
+    ::testing::Values(
+        // basic string
+        str_info{ "hello, world", "[\"hello, world\"]", JSON_ERROR_NONE },
+        // string with escaped character: " \ / b f n r t
+        str_info{ "\"\\/\b\f\n\r\t", "[\"\\\"\\\\\\/\\b\\f\\n\\r\\t\"]", JSON_ERROR_NONE },
+        // string without a cloging quote
+        str_info{ NULL, "[\"hello, world]", JSON_ERROR_UNBALANCED_QUOTE },
+        // string with invalid escape sequence
+        str_info{ NULL, "[\"\\u\"]", JSON_ERROR_INVALID_ESCAPE_SEQUENCE },
+        str_info{ NULL, "[\"\\m\"]", JSON_ERROR_INVALID_ESCAPE_SEQUENCE },
+        // string with a control character
+        str_info{ NULL, "[\"\0\"]", JSON_ERROR_UNBALANCED_QUOTE },
+        str_info{ NULL, "[\"\037\"]", JSON_ERROR_STRING_HAS_CONTROL_CHAR },
+        str_info{ NULL, "[\"\177\"]", JSON_ERROR_STRING_HAS_CONTROL_CHAR }
         ));
 
 

@@ -44,7 +44,7 @@ static void  json_parser_destroy(json_parser *);
 static json_output *json_output_new();
 void         json_output_destroy(json_output *jo);
 
-static int   escaped_char2actual(char c);
+static int   escaped_char2actual(int c);
 
 
 /* UTILITIES */
@@ -54,7 +54,7 @@ static int   escaped_char2actual(char c);
 #define CHAR2NUM(c)              ((c) - '0')
 #define IS_CONTROL_CHAR(c)       ((c) < 32 ||  (c) == 127)
 
-static int escaped_char2actual(char c)
+static int escaped_char2actual(int c)
 {
     switch (c)
     {
@@ -82,7 +82,7 @@ static int escaped_char2actual(char c)
             c = -1;
             break;
     }
-    return -1;
+    return c;
 }
 
 
@@ -309,7 +309,7 @@ ERROR:
  *           |
  *           \" | \\ | \/ | \b | \f | \n | \r | \t | \u four-hex-digits
  *  control_character = charatcer from 0-32 and 127
- * TODO currently supposet 0-127
+ * TODO currently supports 0-127
 m*/
 static json *parse_string(json_parser *parser)
 {
@@ -341,20 +341,27 @@ static json *parse_string(json_parser *parser)
             if (c == '\\')
             {
                 if ((c = escaped_char2actual(json_next(parser))) < 0)
+                {
+                    parser->error = JSON_ERROR_INVALID_ESCAPE_SEQUENCE;
                     goto ERROR;
+                }
             }
 
             string->string_val[string->cnt++] = c;
         }
 
-        string->string_val[string->cnt++] = '\0'; // is null termination necessary?
-
         if (c != '"')
         {
-            parser->error = JSON_ERROR_UNBALANCED_QUOTE;
+            if (c == '\0')
+                parser->error = JSON_ERROR_UNBALANCED_QUOTE;
+            else if (IS_CONTROL_CHAR(c))
+                parser->error = JSON_ERROR_STRING_HAS_CONTROL_CHAR;
+            else // this should not happen
+                parser->error = JSON_ERROR_INVALID_STRING;
             goto ERROR;
         }
         
+        string->string_val[string->cnt++] = '\0';
         parser->skip_space = true;
         return string;
     }
