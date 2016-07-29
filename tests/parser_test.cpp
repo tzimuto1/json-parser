@@ -1,6 +1,8 @@
 #include "gtest/gtest.h"
 #include "parser.h"
 
+// TODO we need a way to get rid of the repeated call to json_output_destroy
+
 /*
  * List of tests
  * INCORRECT STARTING INPUT

@@ -100,38 +100,53 @@ LOW LEVEL DETAILS
 API METHODS
 ===========
 
+
+
 CRUD
+
+BASIC_API
+=========
+[DONE]json_create()
+json_stringify()
 
 JSON Object API
 ---------------
 C
-json_create()
+[^]json_create()
 
 R
-json_object_has_key()
-json_object_has_number()
-json_object_has_string()
-json_object_get_all_keys()
+[DONE]json_object_has_key()
+[DONE]json_object_has_number()
+[DONE]json_object_has_boolean()
+[DONE]json_object_has_string()
+
 json_object_get()
 json_object_get_all()
-json_object_get_number()
-json_object_get_numbers()
-json_object_get_bool()
-json_object_get_bools()
-json_object_get_string()
-json_object_get_strings()
-json_object_get_length() / json_value_get_length()
+<notnow>
+    json_object_get_number()
+    json_object_get_numbers()
+    json_object_get_bool()
+    json_object_get_bools()
+    json_object_get_string()
+    json_object_get_strings()
+    json_object_get_number_keys()
+    json_object_get_bool_keys()
+    json_object_get_string_keys()
+</notnow>
+json_get_size()
+json_object_get_all_keys()
 json_object_is_empty()
-json_object_stringify() / json_value_stringify()
+Object iterator
+// TODO support of deep/nested keys/values?
 
 U
-json_object_put_value()
-json_object_put_number()
-json_object_put_string()
+[DONE]json_object_put_number()
+[DONE]json_object_put_bool()
+[DONE]json_object_put_string()
 json_object_remove_member()
 
 D
-json_destroy()
+[^]json_destroy()
 
 JSON Array API
 --------------
@@ -142,12 +157,14 @@ R
 json_array_has_number()
 json_array_has_string()
 json_array_get()
+<notnow>
 json_array_get_number()
 json_array_get_numbers()
 json_array_get_bool()
 json_array_get_bools()
 json_array_get_string()
 json_array_get_strings()
+</notnow>
 json_array_index_of_number()
 json_array_index_of_string()
 json_array_stringify() / json_value_stringify()
@@ -163,5 +180,25 @@ json_destroy()
 
 
 
+
+
+/*
+ * Get the number corresponding to given key
+ */
+double *json_object_get_number(json *object, const char *key)
+{
+    int   i = 0;
+
+    if (!JSON_HAS_TYPE(object, JSON_TYPE_OBJECT))
+        return NULL;
+
+    for (i = 0; i < object->cnt; i++)
+    {
+        if (strcmp(key, object->members[i]->key) == 0)
+            return object->members[i]->value;
+    }
+
+    return NULL;
+}
 
 
