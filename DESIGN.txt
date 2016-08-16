@@ -120,18 +120,22 @@ R
 [DONE]json_object_has_boolean()
 [DONE]json_object_has_string()
 
-json_object_get()
-json_object_get_all()
+[DONE]json_object_get()
+    - return the object. Return NULL if an error occurs
+[DONE]json_object_get_all()
+    - return the list of objects. Return NULL if an error occurs
+    - pass pointer to contain the size of the c
+[DONE]json_object_get_number()
+    - pass pointer to hold the number and return the success or error status
+[DONE]json_object_get_bool()
+[DONE]json_object_get_string()
 <notnow>
-    json_object_get_number()
-    json_object_get_numbers()
-    json_object_get_bool()
-    json_object_get_bools()
-    json_object_get_string()
-    json_object_get_strings()
-    json_object_get_number_keys()
-    json_object_get_bool_keys()
-    json_object_get_string_keys()
+json_object_get_numbers()
+json_object_get_bools()
+json_object_get_strings()
+json_object_get_number_keys()
+json_object_get_bool_keys()
+json_object_get_string_keys()
 </notnow>
 json_get_size()
 json_object_get_all_keys()
@@ -143,7 +147,7 @@ U
 [DONE]json_object_put_number()
 [DONE]json_object_put_bool()
 [DONE]json_object_put_string()
-json_object_remove_member()
+[DONE]json_object_remove_member()
 
 D
 [^]json_destroy()

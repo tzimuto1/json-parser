@@ -2,6 +2,9 @@
 #include "parser.h"
 #include "json.h"
 
+// TODO: we need a fixture class so that we do not repeat some of the code e.g
+// json_output_destroy
+
 TEST(json_object_has_keyTest, empty_object)
 {
     const char  *json_str = "{}";
@@ -68,7 +71,7 @@ TEST(json_object_has_stringTest, simple_object)
 }
 
 
-TEST(json_object_put_number, basic_update)
+TEST(json_object_put_numberTest, basic_update)
 {
     int          rv;
     double       test_num = 3.14;
@@ -90,7 +93,7 @@ TEST(json_object_put_number, basic_update)
 }
 
 
-TEST(json_object_put_number, existing_value)
+TEST(json_object_put_numberTest, existing_value)
 {
     int          rv;
     double       test_num = 3.14;
@@ -114,7 +117,7 @@ TEST(json_object_put_number, existing_value)
 }
 
 
-TEST(json_object_put_boolean, basic_update)
+TEST(json_object_put_booleanTest, basic_update)
 {
     int          rv;
     bool         test_bool = true;
@@ -136,7 +139,7 @@ TEST(json_object_put_boolean, basic_update)
 }
 
 
-TEST(json_object_put_string, basic_update)
+TEST(json_object_put_stringTest, basic_update)
 {
     int          rv;
     const char  *json_str = "{\"value\": \"Hello\"}";
@@ -158,7 +161,7 @@ TEST(json_object_put_string, basic_update)
 }
 
 
-TEST(json_object_remove_member, object)
+TEST(json_object_remove_memberTest, object)
 {
     const char  *json_str = "{\"value\": 0, \"dup_val\": 1, \"dup_val\": 2}";
     json_output *output = json_parse(json_str);
@@ -178,3 +181,97 @@ TEST(json_object_remove_member, object)
     json_output_destroy(output);
 }
 
+
+TEST(json_object_getTest, basic)
+{
+    const char  *json_str = "{\"pi\": 3.14, \"e\": {\"is_rational\": false}}";
+    json_output *output = json_parse(json_str);
+    json        *object = output->root;
+    json        *js = NULL;
+
+    js = json_object_get(object, "pi");
+    ASSERT_TRUE(JSON_HAS_TYPE(js, JSON_TYPE_NUMBER));
+    ASSERT_EQ(3.14, js->num_val);
+
+    js = json_object_get(json_object_get(object, "e"), "is_rational");
+    ASSERT_TRUE(JSON_HAS_TYPE(js, JSON_TYPE_BOOLEAN));
+    ASSERT_EQ(false, js->bool_val);
+
+    ASSERT_TRUE(NULL == json_object_get(object, "i"));
+
+    json_output_destroy(output);
+}
+
+
+TEST(json_object_get_allTest, basic)
+{
+    const char  *json_str = "{\"pi\": 3.14, \"e\": 2.72, \"g\": 9.81}";
+    json_output *output = json_parse(json_str);
+    json        *object = output->root;
+    json        **all_js = NULL;
+
+    all_js = json_object_get_all(object);
+    ASSERT_TRUE(all_js != NULL);
+
+    ASSERT_EQ(3.14, all_js[0]->num_val);
+    ASSERT_EQ(2.72, all_js[1]->num_val);
+    ASSERT_EQ(9.81, all_js[2]->num_val);
+    ASSERT_TRUE(NULL == all_js[3]);
+
+    free(all_js);
+    json_output_destroy(output);
+}
+
+
+TEST(json_object_get_numberTest, basic)
+{
+    double      number = 0;
+    const char  *json_str = "{\"pi\": 3.14, \"b\": true}";
+    json_output *output = json_parse(json_str);
+    json        *object = output->root;     
+
+    ASSERT_EQ(API_ERROR_INPUT_INVALID, json_object_get_number(object, "pi", NULL));
+
+    ASSERT_EQ(API_ERROR_NONE, json_object_get_number(object, "pi", &number));
+    ASSERT_EQ(3.14, number);
+
+    ASSERT_EQ(API_ERROR_NOT_FOUND, json_object_get_number(object, "b", &number));
+    
+    json_output_destroy(output);
+}
+
+
+TEST(json_object_get_booleanTest, basic)
+{
+    bool         bool_val = false;
+    const char  *json_str = "{\"pi\": 3.14, \"b\": true}";
+    json_output *output = json_parse(json_str);
+    json        *object = output->root;     
+
+    ASSERT_EQ(API_ERROR_INPUT_INVALID, json_object_get_boolean(object, "b", NULL));
+
+    ASSERT_EQ(API_ERROR_NONE, json_object_get_boolean(object, "b", &bool_val));
+    ASSERT_EQ(true, bool_val);
+
+    ASSERT_EQ(API_ERROR_NOT_FOUND, json_object_get_boolean(object, "pi", &bool_val));
+    
+    json_output_destroy(output);
+}
+
+
+TEST(json_object_get_stringTest, basic)
+{
+    char        *str_val = NULL;
+    const char  *json_str = "{\"str\": \"Hello World\", \"b\": true}";
+    json_output *output = json_parse(json_str);
+    json        *object = output->root;     
+
+    ASSERT_EQ(API_ERROR_INPUT_INVALID, json_object_get_string(object, "b", NULL));
+
+    ASSERT_EQ(API_ERROR_NONE, json_object_get_string(object, "str", &str_val));
+    ASSERT_STREQ("Hello World", str_val);
+
+    ASSERT_EQ(API_ERROR_NOT_FOUND, json_object_get_string(object, "b", &str_val));
+    
+    json_output_destroy(output);
+}

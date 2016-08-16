@@ -85,7 +85,7 @@ bool json_object_has_key(json *object, const char *key)
 {
     int i = 0;
 
-    if (!JSON_HAS_TYPE(object, JSON_TYPE_OBJECT))
+    if (!JSON_HAS_TYPE(object, JSON_TYPE_OBJECT) || !key)
         return false;
 
     for (i = 0; i < object->cnt; i++)
@@ -167,53 +167,127 @@ bool json_object_has_string(json *object, const char *string)
 }
 
 
-// /*
-//  * Get the object value corresponding to given key
-//  */
-// json *json_object_get(json *object, const char *key)
-// {
-//     int   i = 0;
+/*
+ * Get the object value corresponding to given key
+ */
+json *json_object_get(json *object, const char *key)
+{
+    int   i = 0;
 
-//     if (!JSON_HAS_TYPE(object, JSON_TYPE_OBJECT))
-//         return NULL;
+    if (!JSON_HAS_TYPE(object, JSON_TYPE_OBJECT) || !key)
+        return NULL;
 
-//     for (i = 0; i < object->cnt; i++)
-//     {
-//         if (strcmp(key, object->members[i]->key) == 0)
-//             return object->members[i]->value;
-//     }
+    for (i = 0; i < object->cnt; i++)
+    {
+        if (strcmp(key, object->members[i]->key) == 0)
+            return object->members[i]->value;
+    }
 
-//     return NULL;
-// }
+    return NULL;
+}
 
 
-// /*
-//  * Get all the values in the object
-//  */
-// json *json_object_get_all(json *object)
-// {
-//     int    i = 0;
-//     int    alloced = 10;
-//     json **values = NULL;
+/*
+ * Get all the values in the object
+ * Memory is allocated to store the values and should be deallocated by the callee.
+ * The last entry in the array is null and can be useful during iteration.
+ */
+json **json_object_get_all(json *object)
+{
+    int    i = 0;
+    json **values = NULL;
 
-//     if (!JSON_HAS_TYPE(object, JSON_TYPE_OBJECT))
-//         return NULL;
+    if (!JSON_HAS_TYPE(object, JSON_TYPE_OBJECT))
+    {
+        return NULL;
+    }
 
-//     values = (json **) calloc(alloced, sizeof(json *));
+    values = (json **) calloc(object->cnt + 1, sizeof(json *));
 
-//     for (i = 0; i < object->cnt; i++)
-//     {
-//         if (i == alloced)
-//         {
-//             alloced += 10;
-//             values = (json **) realloc(keys, alloced * sizeof(json *));
-//         }
-//         values[i] = object->members[i]->value;
-//     }
+    for (i = 0; i < object->cnt; i++)
+    {
+        values[i] = object->members[i]->value;
+    }
 
-//     return values;
-// }
+    return values;
+}
 
+
+/*
+ * Get the number corresponding to given key
+ */
+api_error json_object_get_number(json *object, const char *key, double *number)
+{
+    int i = 0;
+
+    if (!JSON_HAS_TYPE(object, JSON_TYPE_OBJECT) || !key || !number)
+    {
+        return API_ERROR_INPUT_INVALID;
+    }
+
+    for (i = 0; i < object->cnt; i++)
+    {
+        if (JSON_HAS_TYPE(object->members[i]->value, JSON_TYPE_NUMBER) 
+            && (strcmp(key, object->members[i]->key) == 0))
+        {
+            *number = object->members[i]->value->num_val;
+            return API_ERROR_NONE;
+        }
+    }
+
+    return API_ERROR_NOT_FOUND;
+}
+
+/*
+ * Get the boolean corresponding to given key
+ */
+api_error json_object_get_boolean(json *object, const char *key, bool *bool_val)
+{
+    int i = 0;
+
+    if (!JSON_HAS_TYPE(object, JSON_TYPE_OBJECT) || !key || !bool_val)
+    {
+        return API_ERROR_INPUT_INVALID;
+    }
+
+    for (i = 0; i < object->cnt; i++)
+    {
+        if (JSON_HAS_TYPE(object->members[i]->value, JSON_TYPE_BOOLEAN) 
+            && (strcmp(key, object->members[i]->key) == 0))
+        {
+            *bool_val = object->members[i]->value->bool_val;
+            return API_ERROR_NONE;
+        }
+    }
+
+    return API_ERROR_NOT_FOUND;
+}
+
+
+/*
+ * Get the string corresponding to given key
+ */
+api_error json_object_get_string(json *object, const char *key, char **str_val)
+{
+    int i = 0;
+
+    if (!JSON_HAS_TYPE(object, JSON_TYPE_OBJECT) || !key || !str_val)
+    {
+        return API_ERROR_INPUT_INVALID;
+    }
+
+    for (i = 0; i < object->cnt; i++)
+    {
+        if (JSON_HAS_TYPE(object->members[i]->value, JSON_TYPE_STRING) 
+            && (strcmp(key, object->members[i]->key) == 0))
+        {
+            *str_val = object->members[i]->value->string_val;
+            return API_ERROR_NONE;
+        }
+    }
+
+    return API_ERROR_NOT_FOUND;
+}
 
 // /*
 //  * Return all they keys in the object
@@ -313,6 +387,9 @@ int json_object_put_boolean(json *object, const char *key, bool bool_val)
 
     if (!JSON_HAS_TYPE(object, JSON_TYPE_OBJECT))
         return API_ERROR_NOT_OBJECT;
+
+    if (!key)
+        return API_ERROR_KEY_INVALID;
 
     for (i = 0; i < object->cnt; i++)
     {
@@ -415,6 +492,6 @@ void json_object_remove_member(json *object, const char *key)
         }
     }
 
-    object->cnt -= num_rem++;
+    object->cnt -= num_rem;
 }
 
