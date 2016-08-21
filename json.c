@@ -55,6 +55,32 @@ json *json_create(json_type type)
 }
 
 /*
+ * Create a json "object" give a type and value
+ */
+json *json_full_create(json_type type, const void *val)
+{
+    json *js = NULL;
+    js = json_create(type);
+
+    switch (type)
+    {
+        case JSON_TYPE_NUMBER:
+            js->num_val = *(double *) val;
+            break;
+        case JSON_TYPE_BOOLEAN:
+            js->bool_val = *(bool *) val;
+            break;
+        case JSON_TYPE_STRING:
+            js->string_val = strdup((char *) val);
+            js->cnt = strlen(js->string_val) + 1;
+            break;
+        default:
+            break;
+    }
+    return js;
+}
+
+/*
  * Return the size of json "object"
  */
 int json_get_size(json *js)
@@ -363,8 +389,7 @@ int json_object_put_number(json *object, const char *key, double number)
 
     pair = (obj_pair *) calloc(1, sizeof(obj_pair));
     pair->key = strdup(key);
-    pair->value = json_create(JSON_TYPE_NUMBER);
-    pair->value->num_val = number;
+    pair->value = json_full_create(JSON_TYPE_NUMBER, &number);
 
     if (object->cnt == object->alloced)
     {
@@ -404,8 +429,7 @@ int json_object_put_boolean(json *object, const char *key, bool bool_val)
 
     pair = (obj_pair *) calloc(1, sizeof(obj_pair));
     pair->key = strdup(key);
-    pair->value = json_create(JSON_TYPE_BOOLEAN);
-    pair->value->bool_val = bool_val;
+    pair->value = json_full_create(JSON_TYPE_BOOLEAN, &bool_val);
 
     if (object->cnt == object->alloced)
     {
@@ -451,9 +475,7 @@ int json_object_put_string(json *object, const char *key, const char *str_val)
     // create a new pair
     pair = (obj_pair *) calloc(1, sizeof(obj_pair));
     pair->key = strdup(key);
-    pair->value = json_create(JSON_TYPE_STRING);
-    pair->value->string_val = strdup(str_val);
-    pair->value->cnt = strlen(str_val) + 1;
+    pair->value = json_full_create(JSON_TYPE_STRING, str_val);
 
     if (object->cnt == object->alloced)
     {
@@ -695,7 +717,6 @@ int json_array_index_of_string(json *array, const char *str_val)
  */
 static int json_array_generic_add(json *array, int idx, json_type type, const void *val)
 {
-    json *elem = NULL;
     if (!JSON_HAS_TYPE(array, JSON_TYPE_ARRAY) 
         || !IDX_WITHIN_BOUNDS(array, idx))
     {
@@ -704,26 +725,9 @@ static int json_array_generic_add(json *array, int idx, json_type type, const vo
 
     assert(type > JSON_TYPE_NONE || type < JSON_TYPE_END);
 
-    // destroy original element and create a new one
-    elem = array->elements[idx];
-    json_destroy(elem); // TODO can we reuse memory instead of deallocating?
-    elem = json_create(type);
-
-    switch (type) 
-    {
-        case JSON_TYPE_NUMBER:
-            elem->num_val = *(double *) val;
-            break;
-        case JSON_TYPE_BOOLEAN:
-            elem->bool_val = *(bool *) val;
-            break;
-        case JSON_TYPE_STRING:
-            elem->string_val = strdup((char *) val);
-            elem->cnt = strlen(elem->string_val) + 1;
-            break;
-        default: // suppress warning
-            break;
-    }
+    // destroy original element and create a new one;
+    json_destroy(array->elements[idx]); // TODO can we reuse memory instead of deallocating?
+    array->elements[idx] = json_full_create(type, val);
 
     return API_ERROR_NONE;
 }
@@ -756,32 +760,15 @@ static void json_array_append(json *array, const void *val, json_type type)
 {
     json *js = NULL;
 
+    assert(NULL == js);
+
     if (!JSON_HAS_TYPE(array, JSON_TYPE_ARRAY) 
         || !IS_PRIMITIVE_TYPE(type))
     {
         return;
     }
 
-    // create value
-    js = json_create(type);
-
-    switch (type)
-    {
-        case JSON_TYPE_NUMBER:
-            js->num_val = *(double *) val;
-            break;
-        case JSON_TYPE_BOOLEAN:
-            js->bool_val = *(bool *) val;
-            break;
-        case JSON_TYPE_STRING:
-            js->string_val = strdup((char *) val);
-            js->cnt = strlen(js->string_val) + 1;
-            break;
-        default:
-            break;
-    }
-
-    // reallocate memory
+    js = json_full_create(type, val);
     if (array->cnt == array->alloced)
     {
         array->alloced += 10;

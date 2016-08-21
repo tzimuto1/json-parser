@@ -63,6 +63,7 @@ typedef enum api_error
 
 /* generic APIs */
 json *json_create(json_type type);
+json *json_full_create(json_type type, const void *val);
 bool  json_is_empty(json *js);
 void  json_destroy(json *js);
 int   json_get_size(json *js);
