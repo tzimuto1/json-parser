@@ -10,11 +10,19 @@
 
 /* static function declarations */
 static bool json_is_equal(json *js, const void *val, json_type type);
+static void json_shallow_copy(json *js, const void *val_ptr, json_type type);
+
 static void pair_destroy(obj_pair *pair);
+static api_error json_object_generic_get(json *object, const char *key, void *val_ptr, json_type type);
+static bool json_object_has_value(json *object, const void *val, json_type type);
+static int  json_object_generic_put(json *object, const char *key, const void *val, json_type type);
+
 static int  json_array_index_of(json *array, const void *val, json_type type);
+static api_error json_array_generic_get(json *array, int idx, void *val_ptr, json_type type);
 static int  json_array_generic_add(json *array, int idx, json_type type, const void *val);
 static void json_array_append(json *array, const void *val, json_type type);
 static void json_array_remove_element(json *array, const void *elem, json_type type);
+static bool json_array_has_value(json *array, const void *val, json_type type);
 
 /* ========== GENERIC METHODS ========== */
 
@@ -23,7 +31,7 @@ static void json_array_remove_element(json *array, const void *elem, json_type t
  */
 static bool json_is_equal(json *js, const void *val, json_type type)
 {
-    if (!JSON_HAS_TYPE(js, type))
+    if (!JSON_HAS_TYPE(js, type) || !val)
     {
         return false;
     }
@@ -52,6 +60,32 @@ json *json_create(json_type type)
     json *js = (json *) calloc(1, sizeof(json));
     js->type = type;
     return js;
+}
+
+/*
+ * Saves the contents of js in val
+ */
+static void json_shallow_copy(json *js, const void *val_ptr, json_type type)
+{
+    if (!JSON_HAS_TYPE(js, type) || !val_ptr)
+    {
+        return;
+    }
+
+    switch (type)
+    {
+        case JSON_TYPE_NUMBER:
+            *(double *) val_ptr = js->num_val;
+            break;
+        case JSON_TYPE_BOOLEAN:
+            *(bool *) val_ptr = js->bool_val;
+            break;
+        case JSON_TYPE_STRING: // no string duplication, hence shallow copying
+            *(char **) val_ptr = js->string_val;
+            break;
+        default:
+            break; 
+    }
 }
 
 /*
@@ -174,10 +208,7 @@ bool json_object_has_key(json *object, const char *key)
 }
 
 
-/*
- * Return true if json object has the number value
- */
-bool json_object_has_number(json *object, double number)
+static bool json_object_has_value(json *object, const void *val, json_type type)
 {
     int i = 0;
 
@@ -186,14 +217,20 @@ bool json_object_has_number(json *object, double number)
 
     for (i = 0; i < object->cnt; i++)
     {
-        if (JSON_HAS_TYPE(object->members[i]->value, JSON_TYPE_NUMBER))
+        if (json_is_equal(object->members[i]->value, val, type))
         {
-            if (object->members[i]->value->num_val == number)
-                return true;
+            return true;
         }
     }
 
     return false;
+}
+/*
+ * Return true if json object has the number value
+ */
+bool json_object_has_number(json *object, double number)
+{
+    return json_object_has_value(object, &number, JSON_TYPE_NUMBER);
 }
 
 
@@ -202,21 +239,7 @@ bool json_object_has_number(json *object, double number)
  */
 bool json_object_has_boolean(json *object, bool bool_val)
 {
-    int i = 0;
-
-    if (!JSON_HAS_TYPE(object, JSON_TYPE_OBJECT))
-        return false;
-
-    for (i = 0; i < object->cnt; i++)
-    {
-        if (JSON_HAS_TYPE(object->members[i]->value, JSON_TYPE_BOOLEAN))
-        {
-            if (object->members[i]->value->bool_val == bool_val)
-                return true;
-        }
-    }
-
-    return false;
+    return json_object_has_value(object, &bool_val, JSON_TYPE_BOOLEAN);
 }
 
 
@@ -225,21 +248,7 @@ bool json_object_has_boolean(json *object, bool bool_val)
  */
 bool json_object_has_string(json *object, const char *string)
 {
-    int i = 0;
-
-    if (!JSON_HAS_TYPE(object, JSON_TYPE_OBJECT) || !string)
-        return false;
-
-    for (i = 0; i < object->cnt; i++)
-    {
-        if (JSON_HAS_TYPE(object->members[i]->value, JSON_TYPE_STRING))
-        {
-            if (strcmp(string, object->members[i]->value->string_val) == 0)
-                return true;
-        }
-    }
-
-    return false;
+    return json_object_has_value(object, string, JSON_TYPE_STRING);
 }
 
 
@@ -289,24 +298,21 @@ json **json_object_get_all(json *object)
 }
 
 
-/*
- * Get the number corresponding to given key
- */
-api_error json_object_get_number(json *object, const char *key, double *number)
+static api_error json_object_generic_get(json *object, const char *key, void *val_ptr, json_type type)
 {
     int i = 0;
 
-    if (!JSON_HAS_TYPE(object, JSON_TYPE_OBJECT) || !key || !number)
+    if (!JSON_HAS_TYPE(object, JSON_TYPE_OBJECT) || !key || !val_ptr)
     {
         return API_ERROR_INPUT_INVALID;
     }
 
     for (i = 0; i < object->cnt; i++)
     {
-        if (JSON_HAS_TYPE(object->members[i]->value, JSON_TYPE_NUMBER) 
+        if (JSON_HAS_TYPE(object->members[i]->value, type) 
             && (strcmp(key, object->members[i]->key) == 0))
         {
-            *number = object->members[i]->value->num_val;
+            json_shallow_copy(object->members[i]->value, val_ptr, type);
             return API_ERROR_NONE;
         }
     }
@@ -315,28 +321,19 @@ api_error json_object_get_number(json *object, const char *key, double *number)
 }
 
 /*
+ * Get the number corresponding to given key
+ */
+api_error json_object_get_number(json *object, const char *key, double *number)
+{
+    return json_object_generic_get(object, key, number, JSON_TYPE_NUMBER);
+}
+
+/*
  * Get the boolean corresponding to given key
  */
 api_error json_object_get_boolean(json *object, const char *key, bool *bool_val)
 {
-    int i = 0;
-
-    if (!JSON_HAS_TYPE(object, JSON_TYPE_OBJECT) || !key || !bool_val)
-    {
-        return API_ERROR_INPUT_INVALID;
-    }
-
-    for (i = 0; i < object->cnt; i++)
-    {
-        if (JSON_HAS_TYPE(object->members[i]->value, JSON_TYPE_BOOLEAN) 
-            && (strcmp(key, object->members[i]->key) == 0))
-        {
-            *bool_val = object->members[i]->value->bool_val;
-            return API_ERROR_NONE;
-        }
-    }
-
-    return API_ERROR_NOT_FOUND;
+    return json_object_generic_get(object, key, bool_val, JSON_TYPE_BOOLEAN);
 }
 
 
@@ -345,119 +342,27 @@ api_error json_object_get_boolean(json *object, const char *key, bool *bool_val)
  */
 api_error json_object_get_string(json *object, const char *key, char **str_val)
 {
-    int i = 0;
-
-    if (!JSON_HAS_TYPE(object, JSON_TYPE_OBJECT) || !key || !str_val)
-    {
-        return API_ERROR_INPUT_INVALID;
-    }
-
-    for (i = 0; i < object->cnt; i++)
-    {
-        if (JSON_HAS_TYPE(object->members[i]->value, JSON_TYPE_STRING) 
-            && (strcmp(key, object->members[i]->key) == 0))
-        {
-            *str_val = object->members[i]->value->string_val;
-            return API_ERROR_NONE;
-        }
-    }
-
-    return API_ERROR_NOT_FOUND;
+    return json_object_generic_get(object, key, str_val, JSON_TYPE_STRING);
 }
 
 
-/*
- * Put a number in an object
- */
-  // TODO: should call a generic function
-int json_object_put_number(json *object, const char *key, double number)
+static int json_object_generic_put(json *object, const char *key, const void *val, json_type type)
 {
     int       i = 0;
     obj_pair *pair = NULL;
 
+    // TODO error handling a mess
     if (!JSON_HAS_TYPE(object, JSON_TYPE_OBJECT))
+    {
         return API_ERROR_NOT_OBJECT; // should be input invalid maybe
-
-    for (i = 0; i < object->cnt; i++)
-    {
-        if (strcmp(key, object->members[i]->key) == 0)
-        {
-            object->members[i]->value->num_val = number;
-            return API_ERROR_NONE;
-        }
     }
-
-    pair = (obj_pair *) calloc(1, sizeof(obj_pair));
-    pair->key = strdup(key);
-    pair->value = json_full_create(JSON_TYPE_NUMBER, &number);
-
-    if (object->cnt == object->alloced)
-    {
-        object->alloced += 10;
-        object->members = (obj_pair **) realloc(object->members, 
-            sizeof(obj_pair *) * object->alloced);
-    }
-
-    object->members[object->cnt++] = pair;
-    return API_ERROR_NONE;
-}
-
-
-/*
- * Put a boolean in an object
- */
- // TODO: should call a generic function
-int json_object_put_boolean(json *object, const char *key, bool bool_val)
-{
-    int       i = 0;
-    obj_pair *pair = NULL;
-
-    if (!JSON_HAS_TYPE(object, JSON_TYPE_OBJECT))
-        return API_ERROR_NOT_OBJECT;
 
     if (!key)
-        return API_ERROR_KEY_INVALID;
-
-    for (i = 0; i < object->cnt; i++)
     {
-        if (strcmp(key, object->members[i]->key) == 0)
-        {
-            object->members[i]->value->bool_val = bool_val;
-            return API_ERROR_NONE;
-        }
+        return API_ERROR_KEY_INVALID;
     }
 
-    pair = (obj_pair *) calloc(1, sizeof(obj_pair));
-    pair->key = strdup(key);
-    pair->value = json_full_create(JSON_TYPE_BOOLEAN, &bool_val);
-
-    if (object->cnt == object->alloced)
-    {
-        object->alloced += 10;
-        object->members = (obj_pair **) realloc(object->members, 
-            sizeof(obj_pair *) * object->alloced);
-    }
-
-    object->members[object->cnt++] = pair;
-    return API_ERROR_NONE;
-}
-
-
-/*
- * Map key to the value str_val
- */
-int json_object_put_string(json *object, const char *key, const char *str_val)
-{
-    int       i = 0;
-    obj_pair *pair = NULL;
-
-    if (!JSON_HAS_TYPE(object, JSON_TYPE_OBJECT))
-        return API_ERROR_NOT_OBJECT;
-
-    if (!key)
-        return API_ERROR_KEY_INVALID;
-
-    if (!str_val)
+    if (!val)
     {
         return API_ERROR_VALUE_INVALID;
     }
@@ -466,16 +371,29 @@ int json_object_put_string(json *object, const char *key, const char *str_val)
     {
         if (strcmp(key, object->members[i]->key) == 0)
         {
-            free(object->members[i]->value->string_val);
-            object->members[i]->value->string_val = strdup(str_val);
+            switch (type)
+            {
+                case JSON_TYPE_NUMBER:
+                    object->members[i]->value->num_val = *(double *) val;
+                    break;
+                case JSON_TYPE_BOOLEAN:
+                    object->members[i]->value->bool_val = *(bool *) val;
+                    break;
+                case JSON_TYPE_STRING:
+                    free(object->members[i]->value->string_val);
+                    object->members[i]->value->string_val = strdup((char *) val);
+                    object->members[i]->value->cnt = strlen((char *) val) + 1;
+                    break;
+                default: // should never happen
+                    break;
+            }
             return API_ERROR_NONE;
         }
     }
 
-    // create a new pair
     pair = (obj_pair *) calloc(1, sizeof(obj_pair));
     pair->key = strdup(key);
-    pair->value = json_full_create(JSON_TYPE_STRING, str_val);
+    pair->value = json_full_create(type, val);
 
     if (object->cnt == object->alloced)
     {
@@ -486,6 +404,32 @@ int json_object_put_string(json *object, const char *key, const char *str_val)
 
     object->members[object->cnt++] = pair;
     return API_ERROR_NONE;
+}
+
+/*
+ * Put a number in an object
+ */
+int json_object_put_number(json *object, const char *key, double number)
+{
+    return json_object_generic_put(object, key, &number, JSON_TYPE_NUMBER);
+}
+
+
+/*
+ * Put a boolean in an object
+ */
+int json_object_put_boolean(json *object, const char *key, bool bool_val)
+{
+    return json_object_generic_put(object, key, &bool_val, JSON_TYPE_BOOLEAN);
+}
+
+
+/*
+ * Map key to the value str_val
+ */
+int json_object_put_string(json *object, const char *key, const char *str_val)
+{
+    return json_object_generic_put(object, key, str_val, JSON_TYPE_STRING);
 }
 
 /*
@@ -523,10 +467,7 @@ void json_object_remove_member(json *object, const char *key)
 
 /* ========== ARRAY METHODS ========== */
 
-/*
- * Return true if json array has the number value
- */
-bool json_array_has_number(json *array, double number)
+static bool json_array_has_value(json *array, const void *val, json_type type)
 {
     int i = 0;
 
@@ -535,14 +476,20 @@ bool json_array_has_number(json *array, double number)
 
     for (i = 0; i < array->cnt; i++)
     {
-        if (JSON_HAS_TYPE(array->elements[i], JSON_TYPE_NUMBER))
+        if (json_is_equal(array->elements[i], val, type))
         {
-            if (array->elements[i]->num_val == number)
-                return true;
+            return true;
         }
     }
-
     return false;
+}
+
+/*
+ * Return true if json array has the number value
+ */
+bool json_array_has_number(json *array, double number)
+{
+    return json_array_has_value(array, &number, JSON_TYPE_NUMBER);
 }
 
 
@@ -551,21 +498,7 @@ bool json_array_has_number(json *array, double number)
  */
 bool json_array_has_boolean(json *array, bool bool_val)
 {
-    int i = 0;
-
-    if (!JSON_HAS_TYPE(array, JSON_TYPE_ARRAY))
-        return false;
-
-    for (i = 0; i < array->cnt; i++)
-    {
-        if (JSON_HAS_TYPE(array->elements[i], JSON_TYPE_BOOLEAN))
-        {
-            if (array->elements[i]->bool_val == bool_val)
-                return true;
-        }
-    }
-
-    return false;
+   return json_array_has_value(array, &bool_val, JSON_TYPE_BOOLEAN);
 }
 
 
@@ -574,21 +507,7 @@ bool json_array_has_boolean(json *array, bool bool_val)
  */
 bool json_array_has_string(json *array, const char *string)
 {
-    int i = 0;
-
-    if (!JSON_HAS_TYPE(array, JSON_TYPE_ARRAY) || !string)
-        return false;
-
-    for (i = 0; i < array->cnt; i++)
-    {
-        if (JSON_HAS_TYPE(array->elements[i], JSON_TYPE_STRING))
-        {
-            if (strcmp(string, array->elements[i]->string_val) == 0)
-                return true;
-        }
-    }
-
-    return false;
+    return json_array_has_value(array, string, JSON_TYPE_STRING);
 }
 
 
@@ -606,24 +525,29 @@ json *json_array_get(json *array, int idx)
 }
 
 
+static api_error json_array_generic_get(json *array, int idx, void *val_ptr, json_type type)
+{
+    if (!JSON_HAS_TYPE(array, JSON_TYPE_ARRAY) 
+        || !IDX_WITHIN_BOUNDS(array, idx)
+        || !val_ptr)
+    {
+        return API_ERROR_INPUT_INVALID;
+    }
+
+    if (JSON_HAS_TYPE(array->elements[idx], type))
+    {
+        json_shallow_copy(array->elements[idx], val_ptr, type);
+        return API_ERROR_NONE;
+    }
+    return API_ERROR_NOT_FOUND;
+}
+
 /*
  * Get the number corresponding to given index
  */
 api_error json_array_get_number(json *array, int idx, double *number)
 {
-    if (!JSON_HAS_TYPE(array, JSON_TYPE_ARRAY) 
-        || !IDX_WITHIN_BOUNDS(array, idx)
-        || !number)
-    {
-        return API_ERROR_INPUT_INVALID;
-    }
-
-    if (JSON_HAS_TYPE(array->elements[idx], JSON_TYPE_NUMBER))
-    {
-        *number = array->elements[idx]->num_val;
-        return API_ERROR_NONE;
-    }
-    return API_ERROR_NOT_FOUND;
+    return json_array_generic_get(array, idx, number, JSON_TYPE_NUMBER);
 }
 
 
@@ -632,19 +556,7 @@ api_error json_array_get_number(json *array, int idx, double *number)
  */
 api_error json_array_get_boolean(json *array, int idx, bool *bool_val)
 {
-    if (!JSON_HAS_TYPE(array, JSON_TYPE_ARRAY) 
-        || !IDX_WITHIN_BOUNDS(array, idx)
-        || !bool_val)
-    {
-        return API_ERROR_INPUT_INVALID;
-    }
-
-    if (JSON_HAS_TYPE(array->elements[idx], JSON_TYPE_BOOLEAN))
-    {
-        *bool_val = array->elements[idx]->bool_val;
-        return API_ERROR_NONE;
-    }
-    return API_ERROR_NOT_FOUND;
+    return json_array_generic_get(array, idx, bool_val, JSON_TYPE_BOOLEAN);
 }
 
 
@@ -653,20 +565,9 @@ api_error json_array_get_boolean(json *array, int idx, bool *bool_val)
  */
 api_error json_array_get_string(json *array, int idx, char **str_val)
 {
-    if (!JSON_HAS_TYPE(array, JSON_TYPE_ARRAY) 
-        || !IDX_WITHIN_BOUNDS(array, idx)
-        || !str_val)
-    {
-        return API_ERROR_INPUT_INVALID;
-    }
-
-    if (JSON_HAS_TYPE(array->elements[idx], JSON_TYPE_STRING))
-    {
-        *str_val = array->elements[idx]->string_val;
-        return API_ERROR_NONE;
-    }
-    return API_ERROR_NOT_FOUND;
+    return json_array_generic_get(array, idx, str_val, JSON_TYPE_STRING);
 }
+
 
 static int json_array_index_of(json *array, const void *val, json_type type)
 {
