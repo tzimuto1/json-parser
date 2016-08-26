@@ -83,7 +83,7 @@ parser_test : parser_test.o parser.o json.o iterator.o gtest_main.a
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $^ -o $@
 
 
-json_api_test.o : json_api_test.cpp $(GTEST_HEADERS)
+json_api_test.o : json_api_test.cpp $(USER_DIR)/json.h $(GTEST_HEADERS)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c json_api_test.cpp
 
 json_api_test : json_api_test.o parser.o json.o iterator.o gtest_main.a

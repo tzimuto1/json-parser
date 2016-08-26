@@ -19,7 +19,7 @@ typedef enum json_type
 #define JSON_HAS_SIZE(js)           ((js->type == JSON_TYPE_STRING) \
                                      || (js->type == JSON_TYPE_ARRAY) \
                                      || (js->type == JSON_TYPE_OBJECT))
-#define IDX_WITHIN_BOUNDS(arr, idx) ((idx) > -1 && (idx) < (arr)->cnt)
+#define IDX_WITHIN_BOUNDS(js, idx)  ((idx) > -1 && (idx) < (js)->cnt)
 #define IS_PRIMITIVE_TYPE(t)        ((t) == JSON_TYPE_STRING \
                                      || (t) == JSON_TYPE_NUMBER \
                                      || (t) == JSON_TYPE_BOOLEAN)
@@ -48,6 +48,11 @@ struct JSON
     };
 };
 
+typedef struct json_obj_iter {
+    json *obj;
+    int idx;
+} json_obj_iter;
+
 // TODO consolidate string not found and number not found
 typedef enum api_error
 {
@@ -67,8 +72,16 @@ json *json_full_create(json_type type, const void *val);
 bool  json_is_empty(json *js);
 void  json_destroy(json *js);
 int   json_get_size(json *js);
+bool  json_is_equal2number(json *js, double number);
+bool  json_is_equal2boolean(json *js, bool bool_val);
+bool  json_is_equal2string(json *js, const char *string);
 
 /* object APIs */
+struct json_obj_iter json_obj_iter_init(json *object);
+obj_pair *json_obj_next(json_obj_iter *it);
+#define json_obj_end(it)  _json_obj_end()
+obj_pair *_json_obj_end();
+
 bool    json_object_has_key(json *object, const char *key);
 bool    json_object_has_number(json *object, double number);
 bool    json_object_has_boolean(json *object, bool bool_val);

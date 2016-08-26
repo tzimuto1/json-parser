@@ -26,9 +26,6 @@ static bool json_array_has_value(json *array, const void *val, json_type type);
 
 /* ========== GENERIC METHODS ========== */
 
-/*
- * Determine if a json value has the given value
- */
 static bool json_is_equal(json *js, const void *val, json_type type)
 {
     if (!JSON_HAS_TYPE(js, type) || !val)
@@ -48,6 +45,30 @@ static bool json_is_equal(json *js, const void *val, json_type type)
         default: // not currently supporting arrays and objects
             return false;
     }
+}
+
+/*
+ * Determine if json value has given number
+ */
+bool json_is_equal2number(json *js, double number)
+{
+    return json_is_equal(js, &number, JSON_TYPE_NUMBER);
+}
+
+/*
+ * Determine if json value has given boolean
+ */
+bool json_is_equal2boolean(json *js, bool bool_val)
+{
+    return json_is_equal(js, &bool_val, JSON_TYPE_BOOLEAN);
+}
+
+/*
+ * Determine if json value has given string
+ */
+bool json_is_equal2string(json *js, const char *string)
+{
+    return json_is_equal(js, string, JSON_TYPE_STRING);
 }
 
 /*
@@ -187,6 +208,33 @@ void json_destroy(json *js)
 }
 
 /* ========== OBJECT METHODS ========== */
+
+
+json_obj_iter json_obj_iter_init(json *object)
+{
+    json_obj_iter it = { .obj = NULL, .idx = 0 };
+    if (JSON_HAS_TYPE(object, JSON_TYPE_OBJECT))
+    {
+        it.obj = object;
+    }
+    return it;
+}
+
+obj_pair *json_obj_next(json_obj_iter *it)
+{
+    json *object = it->obj;
+    if (!JSON_HAS_TYPE(object, JSON_TYPE_OBJECT) 
+        || !IDX_WITHIN_BOUNDS(object, it->idx))
+    {
+        return NULL;
+    }
+    return object->members[it->idx++];
+}
+
+obj_pair *_json_obj_end()
+{
+    return NULL;
+}
 
 /*
  * Return true if json object has the key

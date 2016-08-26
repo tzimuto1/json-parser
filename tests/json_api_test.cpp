@@ -268,6 +268,47 @@ TEST(json_object_get_stringTest, basic)
     json_output_destroy(output);
 }
 
+TEST(json_obj_iterTest, basic)
+{
+    const char *json_str = "{\"a\": \"Hello World\", \"b\": true, \"c\":3.14}";
+    json_output *output = json_parse(json_str);
+    json        *object = output->root;
+    json_obj_iter it;
+    obj_pair    *pair = NULL;
+    json        *value = NULL;
+
+    /*
+      we will 'unroll' the loop below
+      for (pair = json_obj_next(it); pair != json_obj_end(it); pair = json_obj_next(it))
+      {}
+    */
+
+    it = json_obj_iter_init(object);
+
+    pair = json_obj_next(&it);
+    ASSERT_TRUE(pair != json_obj_end(&it));
+    value = pair->value;
+    EXPECT_STREQ("a", pair->key);
+    EXPECT_TRUE(json_is_equal2string(value, "Hello World"));
+
+    pair = json_obj_next(&it);
+    ASSERT_TRUE(pair != json_obj_end(&it));
+    value = pair->value;
+    EXPECT_STREQ("b", pair->key);
+    EXPECT_TRUE(json_is_equal2boolean(value, true));
+
+    pair = json_obj_next(&it);
+    ASSERT_TRUE(pair != json_obj_end(&it));
+    value = pair->value;
+    EXPECT_STREQ("c", pair->key);
+    EXPECT_TRUE(json_is_equal2number(value, 3.14));
+
+    pair = json_obj_next(&it);
+    ASSERT_TRUE(pair == json_obj_end(&it));
+
+    json_output_destroy(output);
+}
+
 /* ========== ARRAY METHODS ========== */
 
 TEST(json_array_has_numberTest, simple_array)

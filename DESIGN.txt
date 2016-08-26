@@ -131,8 +131,7 @@ R
     - pass pointer to hold the number and return the success or error status
 [DONE]json_object_get_bool()
 [DONE]json_object_get_string()
-Object iterator
-// TODO support of deep/nested keys/values?
+[DONE]Object iterator
 
 U
 [DONE]json_object_put_number()
@@ -178,9 +177,8 @@ D
 
 json
 
-
-iterator it = json_iter_init(object, it);
-for (pair = json_iter_begin(it); pair; json_iter_next(it))
+json_iterator it = json_iter_init(object);
+for (pair = json_iter_next(it); pair != json_iter_end(it); pair = json_iter_next(it))
 {
     
 }
