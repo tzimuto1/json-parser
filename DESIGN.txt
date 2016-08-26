@@ -131,15 +131,6 @@ R
     - pass pointer to hold the number and return the success or error status
 [DONE]json_object_get_bool()
 [DONE]json_object_get_string()
-<notnow>
-json_object_get_numbers()
-json_object_get_bools()
-json_object_get_strings()
-json_object_get_number_keys()
-json_object_get_bool_keys()
-json_object_get_string_keys()
-json_object_get_all_keys()
-</notnow>
 Object iterator
 // TODO support of deep/nested keys/values?
 
@@ -159,15 +150,12 @@ R
 [DONE]json_array_has_number()
 [DONE]json_array_has_boolean()
 [DONE]json_array_has_string()
+
 [DONE]json_array_get()
 [DONE]json_array_get_number()
 [DONE]json_array_get_bool()
 [DONE]json_array_get_string()
-<notnow>
-json_array_get_numbers()
-json_array_get_bools()
-json_array_get_strings()
-</notnow>
+
 [DONE]json_array_index_of_number()
 [DONE]json_array_index_of_boolean()
 [DONE]json_array_index_of_string()
@@ -176,9 +164,11 @@ U
 [DONE]json_array_add_number()
 [DONE]json_array_add_boolean()
 [DONE]json_array_add_string()
+
 [DONE]json_array_append_number()
 [DONE]json_array_append_boolean();
 [DONE]json_array_append_string();
+
 [DONE]json_array_remove_at();
 [DONE]json_array_remove_number();
 [DONE]json_array_remove_boolean();
@@ -186,78 +176,11 @@ U
 
 D
 
+json
 
 
-
-
-
-/*
- * Get the number corresponding to given key
- */
-double *json_object_get_number(json *object, const char *key)
+iterator it = json_iter_init(object, it);
+for (pair = json_iter_begin(it); pair; json_iter_next(it))
 {
-    int   i = 0;
-
-    if (!JSON_HAS_TYPE(object, JSON_TYPE_OBJECT))
-        return NULL;
-
-    for (i = 0; i < object->cnt; i++)
-    {
-        if (strcmp(key, object->members[i]->key) == 0)
-            return object->members[i]->value;
-    }
-
-    return NULL;
+    
 }
-
-
-
-
-// /*
-//  * Return all they keys in the object
-//  */
-// char **json_object_get_all_keys(json *object)
-// {
-//     int    i = 0;
-//     int    alloced = 10;
-//     char **keys = NULL;
-
-//     if (!JSON_HAS_TYPE(object, JSON_TYPE_OBJECT))
-//         return NULL;
-
-//     keys = (char **) calloc(alloced, sizeof(char *));
-
-//     for (i = 0; i < object->cnt; i++)
-//     {
-//         if (i == alloced)
-//         {
-//             alloced += 10;
-//             keys = (char **) realloc(keys, alloced * sizeof(char *));
-//         }
-
-//         keys[i] = object->members[i]->key;
-//     }
-//     return keys;
-// }
-
-
-// /*
-//  * Get the size of the object
-//  */
-// int json_object_get_size(json *object)
-// {
-//     if (!JSON_HAS_TYPE(object, JSON_TYPE_OBJECT))
-//         return 0;
-
-//     return object->cnt;
-// }
-
-
-// /*
-//  * Determine if an object is empty or not
-//  */
-// bool json_object_is_empty(json *object)
-// {
-//     return json_object_get_size(object) == 0;
-// }
-

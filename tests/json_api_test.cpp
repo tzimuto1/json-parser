@@ -76,15 +76,17 @@ TEST(json_object_put_numberTest, basic_update)
     const char  *json_str = "{\"name\": \"pi\"}";
     json_output *output = json_parse(json_str);
     json        *object = output->root;
+    json        *js = NULL;
 
-    ASSERT_FALSE(json_object_has_key(object, test_key));
-    ASSERT_FALSE(json_object_has_number(object, test_num));
+    js = json_object_get(object, test_key);
+    ASSERT_TRUE(js == NULL);
 
     rv = json_object_put_number(object, test_key, test_num);
     ASSERT_EQ(API_ERROR_NONE, rv);
 
-    EXPECT_TRUE(json_object_has_key(object, test_key));
-    EXPECT_TRUE(json_object_has_number(object, test_num));
+    js = json_object_get(object, test_key);
+    ASSERT_TRUE(JSON_HAS_TYPE(js, JSON_TYPE_NUMBER));
+    ASSERT_EQ(test_num, js->num_val);
 
     json_output_destroy(output);
 }
@@ -94,19 +96,21 @@ TEST(json_object_put_numberTest, existing_value)
     int          rv;
     double       test_num = 3.14;
     const char  *test_key = "value";
-    const char  *json_str = "{\"name\": \"pi\", \"value\":3.1}";
+    const char  *json_str = "{\"name\": \"pi\", \"value\":\"3.1\"}";
     json_output *output = json_parse(json_str);
     json        *object = output->root;
+    json        *js = NULL;
 
-    ASSERT_TRUE(json_object_has_key(object, test_key));
-    ASSERT_TRUE(json_object_has_number(object, 3.1));
+    js = json_object_get(object, test_key);
+    ASSERT_TRUE(JSON_HAS_TYPE(js, JSON_TYPE_STRING));
     ASSERT_EQ(2, json_get_size(object));
 
     rv = json_object_put_number(object, test_key, test_num);
     ASSERT_EQ(API_ERROR_NONE, rv);
 
-    EXPECT_TRUE(json_object_has_key(object, test_key));
-    EXPECT_TRUE(json_object_has_number(object, test_num));
+    js = json_object_get(object, test_key);
+    ASSERT_TRUE(JSON_HAS_TYPE(js, JSON_TYPE_NUMBER));
+    ASSERT_EQ(test_num, js->num_val);
     ASSERT_EQ(2, json_get_size(object));
 
     json_output_destroy(output);

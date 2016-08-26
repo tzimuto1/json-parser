@@ -371,22 +371,8 @@ static int json_object_generic_put(json *object, const char *key, const void *va
     {
         if (strcmp(key, object->members[i]->key) == 0)
         {
-            switch (type)
-            {
-                case JSON_TYPE_NUMBER:
-                    object->members[i]->value->num_val = *(double *) val;
-                    break;
-                case JSON_TYPE_BOOLEAN:
-                    object->members[i]->value->bool_val = *(bool *) val;
-                    break;
-                case JSON_TYPE_STRING:
-                    free(object->members[i]->value->string_val);
-                    object->members[i]->value->string_val = strdup((char *) val);
-                    object->members[i]->value->cnt = strlen((char *) val) + 1;
-                    break;
-                default: // should never happen
-                    break;
-            }
+            json_destroy(object->members[i]->value);
+            object->members[i]->value = json_full_create(type, val);
             return API_ERROR_NONE;
         }
     }
@@ -434,7 +420,6 @@ int json_object_put_string(json *object, const char *key, const char *str_val)
 
 /*
  * Remove the pair(s) with given key
- * TODO: bug, reduce the number of alloced items too
  */
 void json_object_remove_member(json *object, const char *key)
 {
@@ -462,6 +447,7 @@ void json_object_remove_member(json *object, const char *key)
     }
 
     object->cnt -= num_rem;
+    object->alloced -= num_rem;
 }
 
 
