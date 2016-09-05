@@ -324,6 +324,8 @@ static json *parse_string(json_parser *parser)
 
         if (json_peek(parser) == '"')
         {
+            string->string_val = (char *) calloc(1, sizeof(char));
+            string->cnt++;
             json_next(parser);
             parser->skip_space = true;
             return string;

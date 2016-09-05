@@ -66,6 +66,14 @@ typedef enum api_error
     API_ERROR_INPUT_INVALID,
 } api_error;
 
+
+/* json2string handling */
+typedef struct {
+    int  cnt;
+    int  alloced;
+    char *string;
+} string_buf;
+
 /* generic APIs */
 json *json_create(json_type type);
 json *json_full_create(json_type type, const void *val);
@@ -75,6 +83,7 @@ int   json_get_size(json *js);
 bool  json_is_equal2number(json *js, double number);
 bool  json_is_equal2boolean(json *js, bool bool_val);
 bool  json_is_equal2string(json *js, const char *string);
+char *json2string(json *js, int indent);
 
 /* object APIs */
 struct json_obj_iter json_obj_iter_init(json *object);
@@ -124,6 +133,5 @@ void    json_array_remove_at(json *array, int idx);
 void    json_array_remove_number(json *array, double number);
 void    json_array_remove_boolean(json *array, bool bool_val);
 void    json_array_remove_string(json *array, const char *str_val);
-
 
 #endif // JSON_H

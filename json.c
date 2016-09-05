@@ -4,13 +4,18 @@
  */
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <assert.h>
 #include <string.h>
+#include <stdarg.h>
 #include "json.h"
 
 /* static function declarations */
 static bool json_is_equal(json *js, const void *val, json_type type);
 static void json_shallow_copy(json *js, const void *val_ptr, json_type type);
+static int _json2string(json *js, string_buf *buf, int indent);
+static void string_buf_append(string_buf *buf, const char *fmt, ...);
+static char *string2escaped_string(const char *str);
 
 static void pair_destroy(obj_pair *pair);
 static api_error json_object_generic_get(json *object, const char *key, void *val_ptr, json_type type);
@@ -71,17 +76,6 @@ bool json_is_equal2string(json *js, const char *string)
     return json_is_equal(js, string, JSON_TYPE_STRING);
 }
 
-/*
- * Create a json object given the type of the object
- */
-json *json_create(json_type type)
-{
-    assert(type > JSON_TYPE_NONE || type < JSON_TYPE_END);
-
-    json *js = (json *) calloc(1, sizeof(json));
-    js->type = type;
-    return js;
-}
 
 /*
  * Saves the contents of js in val
@@ -110,6 +104,20 @@ static void json_shallow_copy(json *js, const void *val_ptr, json_type type)
 }
 
 /*
+ * Create a json object given the type of the object
+ */
+json *json_create(json_type type)
+{
+    assert(type > JSON_TYPE_NONE || type < JSON_TYPE_END);
+
+    json *js = (json *) calloc(1, sizeof(json));
+    js->type = type;
+    return js;
+}
+
+/*****************************************************************************/
+
+/*
  * Create a json "object" give a type and value
  */
 json *json_full_create(json_type type, const void *val)
@@ -135,6 +143,8 @@ json *json_full_create(json_type type, const void *val)
     return js;
 }
 
+/*****************************************************************************/
+
 /*
  * Return the size of json "object"
  */
@@ -147,6 +157,8 @@ int json_get_size(json *js)
     return js->cnt;
 }
 
+/*****************************************************************************/
+
 /*
  * Return true if value is empty (makes sense for objects and arrays)
  */
@@ -154,6 +166,8 @@ bool json_is_empty(json *js)
 {
     return json_get_size(js) <= 0;
 }
+
+/*****************************************************************************/
 
 /*
  * Destroy a pair
@@ -205,6 +219,209 @@ void json_destroy(json *js)
             free(js);
             break;
     }
+}
+
+/*****************************************************************************/
+
+static char *string2escaped_string(const char *str)
+{
+    int   str_len = strlen(str);
+    char *escaped_str = NULL;
+    char *e_str = NULL;
+
+    if (!str)
+    {
+        return NULL;
+    }
+
+    escaped_str = (char *) malloc(sizeof(char) * (2 * str_len + 1));
+    e_str = escaped_str;
+
+    for ( ; *str; str++)
+    {
+        switch (*str)
+        {
+            case '"':
+            case '\\':
+            case '/':
+                *e_str++ = '\\';
+                *e_str++ = *str;
+                break;
+            case '\b':
+                *e_str++ = '\\';
+                *e_str++ = 'b';
+                break;
+            case '\f':
+                *e_str++ = '\\';
+                *e_str++ = 'f';
+                break;
+            case '\n':
+                *e_str++ = '\\';
+                *e_str++ = 'n';
+                break;
+            case '\r':
+                *e_str++ = '\\';
+                *e_str++ = 'r';
+                break;
+            case '\t':
+                *e_str++ = '\\';
+                *e_str++ = 't';
+                break;
+            default:
+                *e_str++ = *str;
+                break;
+        }
+    }
+    *e_str = '\0';
+    return escaped_str;
+}
+
+static void string_buf_append(string_buf *buf, const char *fmt, ...)
+{
+    /*
+     * Part of this function was adapted from man 3 printf
+     */
+    int     size = 0;
+    va_list ap;
+
+    /* Determine required size */
+    va_start(ap, fmt);
+    size = vsnprintf(NULL, size, fmt, ap);
+    va_end(ap);
+
+    if (size < 0)
+    {
+        return;
+    }
+
+    // increase buffer if we will leave no space for the null character
+    if (buf->cnt + size > (buf->alloced - 1))
+    {
+        buf->alloced = buf->cnt + size + 64; // add 64 more bytes
+        buf->string = (char *) realloc(buf->string, sizeof(char) * buf->alloced);
+    }
+
+    // write to buffer
+    va_start(ap, fmt);
+    vsnprintf(buf->string + buf->cnt, size + 1, fmt, ap);
+    va_end(ap);
+
+    buf->cnt += size;
+
+}
+
+static int _json2string(json *js, string_buf *buf, int indent)
+{
+    int ret = API_ERROR_NONE;
+
+    if (!js)
+    {
+        return API_ERROR_INPUT_INVALID;
+    }
+
+    switch (js->type)
+    {
+        case JSON_TYPE_OBJECT:
+        {
+            json_obj_iter it;
+            obj_pair *pair = NULL;
+            char     *escaped_key = NULL;      
+
+            string_buf_append(buf, "%c", '{');
+
+            it = json_obj_iter_init(js);
+            for (pair = json_obj_next(&it); pair != json_obj_end(&it); pair = json_obj_next(&it))
+            {
+                if (!(escaped_key = string2escaped_string(pair->key)))
+                {
+                    return API_ERROR_INPUT_INVALID;
+                }
+
+                string_buf_append(buf, "\"%s\":", escaped_key);
+                free(escaped_key);
+
+                if (_json2string(pair->value, buf, indent) != API_ERROR_NONE)
+                {
+                    return API_ERROR_INPUT_INVALID;
+                }
+                string_buf_append(buf, "%s", ", ");
+            }
+
+            if (json_get_size(js) > 0)
+            {
+                buf->cnt -= 2; // remove ", "
+            }
+            string_buf_append(buf, "%c", '}');
+            break;
+        }
+        case JSON_TYPE_ARRAY:
+        {
+            int i = 0;
+
+            string_buf_append(buf, "%c", '[');
+
+            for (i = 0; i < json_get_size(js); i++)
+            {
+                if (_json2string(js->elements[i], buf, indent) != API_ERROR_NONE)
+                {
+                    return API_ERROR_INPUT_INVALID;
+                }
+                string_buf_append(buf, "%s", ", ");
+            }
+
+            if (json_get_size(js) > 0)
+            {
+                buf->cnt -= 2; // remove ", "
+            }
+            string_buf_append(buf, "%c", ']');
+            break;
+        }
+        case JSON_TYPE_STRING:
+        {
+            char *escaped_str = NULL;
+            if (!(escaped_str = string2escaped_string(js->string_val)))
+            {
+                return API_ERROR_INPUT_INVALID;
+            }
+            string_buf_append(buf, "\"%s\"", escaped_str);
+            free(escaped_str);
+            break;
+        }
+        case JSON_TYPE_NUMBER:
+            string_buf_append(buf, "%f", js->num_val);
+            break;
+        case JSON_TYPE_BOOLEAN:
+            string_buf_append(buf, "%s", js->bool_val ? "true" : "false");
+            break;
+        case JSON_TYPE_NULL:
+            string_buf_append(buf, "%s", "null");
+            break;
+        default:
+            ret = API_ERROR_INPUT_INVALID;
+            break;
+    }
+
+    return ret;
+}
+
+/*
+ * Convert js to it's string representation with indentation of indent
+ */
+char *json2string(json *js, int indent)
+{
+    string_buf buf;
+    buf.cnt = 0;
+    buf.alloced = 256;
+    buf.string = (char *) malloc(sizeof(char) * buf.alloced);
+
+    if (_json2string(js, &buf, indent) != API_ERROR_NONE)
+    {
+        free(buf.string);
+        return NULL;
+    }
+    
+    buf.string[buf.cnt++] = '\0';
+    return buf.string;
 }
 
 /* ========== OBJECT METHODS ========== */

@@ -655,3 +655,61 @@ TEST(json_array_remove_elementTest, basic)
     json_output_destroy(output);
 }
 
+/* ========== PRINTING METHODS ========== */
+
+// simple array
+// simple object
+// nested array
+// nested object
+
+typedef struct {
+    const char *input_str;
+    const char *exp_output_str;
+} json_data;
+
+class Json2StringTest : public ::testing::TestWithParam<json_data> {
+
+};
+
+
+TEST_P(Json2StringTest, all_tests)
+{
+    char        *output_str = NULL;
+    json_data   jd = GetParam();
+    json_output *output = json_parse(jd.input_str);
+
+    ASSERT_NE((json_output *) NULL, output);
+    ASSERT_NE((json *) NULL, output->root);
+
+    output_str = json2string(output->root, 0);
+    ASSERT_STREQ(jd.exp_output_str, output_str);
+
+    free(output_str);
+    json_output_destroy(output);
+}
+
+INSTANTIATE_TEST_CASE_P(json2stringTests,
+    Json2StringTest,
+    ::testing::Values(
+        // empty array
+        json_data{ "[]", "[]" },
+        // simple array with integers
+        json_data{ "[1,2,3.14]", "[1.000000, 2.000000, 3.140000]" },
+        // simple array with booleans
+        json_data{ "[true,false]", "[true, false]" },
+        // simple array with null
+        json_data{ "[null]", "[null]" },
+        // simple array with strings
+        json_data{ "[\"Hello\",\"World\",\"\"]", "[\"Hello\", \"World\", \"\"]" },
+        // simple array with complex string A"\/\b\f\n\r\tA
+        json_data{ "[\"A\\\"\\\\/\\b\\f\\n\\r\\tA\"]", "[\"A\\\"\\\\\\/\\b\\f\\n\\r\\tA\"]" },
+        // empty object
+        json_data{ "{}", "{}" },
+        // object with primitives
+        json_data{ "{\"a\":1,\"b\":true,\"c\":null,\"d\":\"string\"}", 
+            "{\"a\":1.000000, \"b\":true, \"c\":null, \"d\":\"string\"}" },
+        // nested json values
+        json_data{ "{\"a\":1,\"b\":{\"c\":[1,2,3,{\"d\":\"d\"}]}}", 
+            "{\"a\":1.000000, \"b\":{\"c\":[1.000000, 2.000000, 3.000000, {\"d\":\"d\"}]}}" }
+        ));
+
