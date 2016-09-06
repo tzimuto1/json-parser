@@ -16,13 +16,27 @@ typedef enum json_type
 } json_type;
 
 #define JSON_HAS_TYPE(js, t)        (js && (js->type == t))
+#define JSON_IS_NONE(js)            JSON_HAS_TYPE(js, JSON_TYPE_NONE)
+#define JSON_IS_OBJECT(js)          JSON_HAS_TYPE(js, JSON_TYPE_OBJECT)
+#define JSON_IS_ARRAY(js)           JSON_HAS_TYPE(js, JSON_TYPE_ARRAY)
+#define JSON_IS_STRING(js)          JSON_HAS_TYPE(js, JSON_TYPE_STRING)
+#define JSON_IS_NUMBER(js)          JSON_HAS_TYPE(js, JSON_TYPE_NUMBER)
+#define JSON_IS_BOOLEAN(js)         JSON_HAS_TYPE(js, JSON_TYPE_BOOLEAN)
+#define JSON_IS_NULL(js)            JSON_HAS_TYPE(js, JSON_TYPE_NULL)
+#define JSON_IS_COMPLEX(js)         (JSON_IS_OBJECT(js) \
+                                     || JSON_IS_ARRAY(js) \
+                                     || JSON_IS_NULL(js))
+
+#define IS_PRIMITIVE_TYPE(t)        ((t) == JSON_TYPE_STRING \
+                                     || (t) == JSON_TYPE_NUMBER \
+                                     || (t) == JSON_TYPE_BOOLEAN)
+
+
 #define JSON_HAS_SIZE(js)           ((js->type == JSON_TYPE_STRING) \
                                      || (js->type == JSON_TYPE_ARRAY) \
                                      || (js->type == JSON_TYPE_OBJECT))
 #define IDX_WITHIN_BOUNDS(js, idx)  ((idx) > -1 && (idx) < (js)->cnt)
-#define IS_PRIMITIVE_TYPE(t)        ((t) == JSON_TYPE_STRING \
-                                     || (t) == JSON_TYPE_NUMBER \
-                                     || (t) == JSON_TYPE_BOOLEAN)
+
 
 typedef struct JSON json;
 typedef struct json_object_pair obj_pair;
@@ -77,6 +91,13 @@ typedef struct {
 /* generic APIs */
 json *json_create(json_type type);
 json *json_full_create(json_type type, const void *val);
+#define JSON_OBJECT_CREATE()  json_create(JSON_TYPE_OBJECT)
+#define JSON_ARRAY_CREATE()   json_create(JSON_TYPE_ARRAY)
+#define JSON_STRING_CREATE()  json_create(JSON_TYPE_STRING)
+#define JSON_NUMBER_CREATE()  json_create(JSON_TYPE_NUMBER)
+#define JSON_BOOLEAN_CREATE() json_create(JSON_TYPE_BOOLEAN)
+#define JSON_NULL_CREATE()    json_create(JSON_TYPE_NULL)
+
 bool  json_is_empty(json *js);
 void  json_destroy(json *js);
 int   json_get_size(json *js);
@@ -104,6 +125,8 @@ api_error json_object_get_boolean(json *object, const char *key, bool *bool_val)
 int     json_object_put_number(json *object, const char *key, double number);
 int     json_object_put_boolean(json *object, const char *key, bool bool_val);
 int     json_object_put_string(json *object, const char *key, const char *str_val);
+int     json_object_put_complex_value(json *object, const char *key, json *value);
+
 void    json_object_remove_member(json *object, const char *key);
 api_error json_object_get_string(json *object, const char *key, char **str_val);
 
@@ -112,10 +135,11 @@ bool    json_array_has_number(json *array, double number);
 bool    json_array_has_boolean(json *array, bool bool_val);
 bool    json_array_has_string(json *array, const char *string);
 
-json    *json_array_get(json *array, int idx);
+json      *json_array_get(json *array, int idx);
 api_error json_array_get_number(json *array, int idx, double *number);
 api_error json_array_get_boolean(json *array, int idx, bool *bool_val);
 api_error json_array_get_string(json *array, int idx, char **str_val);
+json      **json_array_get_elements(json *array);
 
 int     json_array_index_of_number(json *array, double number);
 int     json_array_index_of_boolean(json *array, bool bool_val);

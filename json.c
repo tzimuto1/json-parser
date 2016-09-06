@@ -644,7 +644,16 @@ static int json_object_generic_put(json *object, const char *key, const void *va
 
     pair = (obj_pair *) calloc(1, sizeof(obj_pair));
     pair->key = strdup(key);
-    pair->value = json_full_create(type, val);
+
+    if (IS_PRIMITIVE_TYPE(type))
+    {
+        pair->value = json_full_create(type, val);
+    }
+    else
+    {
+        pair->value = (json *) val;
+    }
+    
 
     if (object->cnt == object->alloced)
     {
@@ -681,6 +690,18 @@ int json_object_put_boolean(json *object, const char *key, bool bool_val)
 int json_object_put_string(json *object, const char *key, const char *str_val)
 {
     return json_object_generic_put(object, key, str_val, JSON_TYPE_STRING);
+}
+
+/*
+ * Map key to to complex type: TODO not tested
+ */
+int json_object_put_complex_value(json *object, const char *key, json *value)
+{
+    if (!JSON_IS_COMPLEX(value))
+    {
+        return API_ERROR_VALUE_INVALID;
+    }
+    return json_object_generic_put(object, key, value, value->type);
 }
 
 /*
@@ -819,6 +840,17 @@ api_error json_array_get_string(json *array, int idx, char **str_val)
     return json_array_generic_get(array, idx, str_val, JSON_TYPE_STRING);
 }
 
+/*
+ * Return real array of elements making the json array
+ */
+ json **json_array_get_elements(json *array)
+ {
+    if (!JSON_IS_ARRAY(array))
+    {
+        return NULL;
+    }
+    return array->elements;
+ }
 
 static int json_array_index_of(json *array, const void *val, json_type type)
 {

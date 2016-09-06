@@ -612,27 +612,4 @@ void json_output_destroy(json_output *jo)
     free(jo);
 }
 
-#ifndef TEST_MODE
-int main(int argc, char *argv[])
-{
-    LOGFUNC();
-    json_output *jo = json_parse("{\"msg\":\"Hello, World\"}");
-    if (jo->error)
-    {
-        printf("Error happened : %d\n", jo->error);
-    }
-    else 
-    {
-        json *r = jo->root;
-        if (!r)
-        {
-            printf("NULL ROOT\n");
-        }
-        else
-        {
-            printf("JSON VALUE OF TYPE %d\n", r->type);
-        }
-    }
-    return 0;
-}
-#endif // TEST_MODE
+
