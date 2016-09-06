@@ -85,7 +85,7 @@ TEST(json_object_put_numberTest, basic_update)
     ASSERT_EQ(API_ERROR_NONE, rv);
 
     js = json_object_get(object, test_key);
-    ASSERT_TRUE(JSON_HAS_TYPE(js, JSON_TYPE_NUMBER));
+    ASSERT_TRUE(JSON_IS_NUMBER(js));
     ASSERT_EQ(test_num, js->num_val);
 
     json_output_destroy(output);
@@ -102,14 +102,14 @@ TEST(json_object_put_numberTest, existing_value)
     json        *js = NULL;
 
     js = json_object_get(object, test_key);
-    ASSERT_TRUE(JSON_HAS_TYPE(js, JSON_TYPE_STRING));
+    ASSERT_TRUE(JSON_IS_STRING(js));
     ASSERT_EQ(2, json_get_size(object));
 
     rv = json_object_put_number(object, test_key, test_num);
     ASSERT_EQ(API_ERROR_NONE, rv);
 
     js = json_object_get(object, test_key);
-    ASSERT_TRUE(JSON_HAS_TYPE(js, JSON_TYPE_NUMBER));
+    ASSERT_TRUE(JSON_IS_NUMBER(js));
     ASSERT_EQ(test_num, js->num_val);
     ASSERT_EQ(2, json_get_size(object));
 
@@ -186,11 +186,11 @@ TEST(json_object_getTest, basic)
     json        *js = NULL;
 
     js = json_object_get(object, "pi");
-    ASSERT_TRUE(JSON_HAS_TYPE(js, JSON_TYPE_NUMBER));
+    ASSERT_TRUE(JSON_IS_NUMBER(js));
     ASSERT_EQ(3.14, js->num_val);
 
     js = json_object_get(json_object_get(object, "e"), "is_rational");
-    ASSERT_TRUE(JSON_HAS_TYPE(js, JSON_TYPE_BOOLEAN));
+    ASSERT_TRUE(JSON_IS_BOOLEAN(js));
     ASSERT_EQ(false, js->bool_val);
 
     ASSERT_TRUE(NULL == json_object_get(object, "i"));
@@ -365,17 +365,17 @@ TEST(json_array_getTest, basic)
 
     // rest of tests
     js = json_array_get(array, 0);
-    ASSERT_TRUE(JSON_HAS_TYPE(js, JSON_TYPE_NUMBER));
+    ASSERT_TRUE(JSON_IS_NUMBER(js));
     ASSERT_EQ(3.14, js->num_val);
 
     js = json_array_get(array, 1);
-    ASSERT_TRUE(JSON_HAS_TYPE(js, JSON_TYPE_OBJECT));
+    ASSERT_TRUE(JSON_IS_OBJECT(js));
     js = json_object_get(js, "is_rational");
     ASSERT_FALSE(NULL == js);
     ASSERT_EQ(false, js->bool_val);
 
     js = json_array_get(array, 2);
-    ASSERT_TRUE(JSON_HAS_TYPE(js, JSON_TYPE_STRING));
+    ASSERT_TRUE(JSON_IS_STRING(js));
     ASSERT_STREQ("true", js->string_val);
 
     json_output_destroy(output);

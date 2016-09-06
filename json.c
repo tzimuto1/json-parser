@@ -430,7 +430,7 @@ char *json2string(json *js, int indent)
 json_obj_iter json_obj_iter_init(json *object)
 {
     json_obj_iter it = { .obj = NULL, .idx = 0 };
-    if (JSON_HAS_TYPE(object, JSON_TYPE_OBJECT))
+    if (JSON_IS_OBJECT(object))
     {
         it.obj = object;
     }
@@ -440,7 +440,7 @@ json_obj_iter json_obj_iter_init(json *object)
 obj_pair *json_obj_next(json_obj_iter *it)
 {
     json *object = it->obj;
-    if (!JSON_HAS_TYPE(object, JSON_TYPE_OBJECT) 
+    if (!JSON_IS_OBJECT(object) 
         || !IDX_WITHIN_BOUNDS(object, it->idx))
     {
         return NULL;
@@ -460,7 +460,7 @@ bool json_object_has_key(json *object, const char *key)
 {
     int i = 0;
 
-    if (!JSON_HAS_TYPE(object, JSON_TYPE_OBJECT) || !key)
+    if (!JSON_IS_OBJECT(object) || !key)
         return false;
 
     for (i = 0; i < object->cnt; i++)
@@ -477,7 +477,7 @@ static bool json_object_has_value(json *object, const void *val, json_type type)
 {
     int i = 0;
 
-    if (!JSON_HAS_TYPE(object, JSON_TYPE_OBJECT))
+    if (!JSON_IS_OBJECT(object))
         return false;
 
     for (i = 0; i < object->cnt; i++)
@@ -524,7 +524,7 @@ json *json_object_get(json *object, const char *key)
 {
     int   i = 0;
 
-    if (!JSON_HAS_TYPE(object, JSON_TYPE_OBJECT) || !key)
+    if (!JSON_IS_OBJECT(object) || !key)
         return NULL;
 
     for (i = 0; i < object->cnt; i++)
@@ -547,7 +547,7 @@ json **json_object_get_all(json *object)
     int    i = 0;
     json **values = NULL;
 
-    if (!JSON_HAS_TYPE(object, JSON_TYPE_OBJECT))
+    if (!JSON_IS_OBJECT(object))
     {
         return NULL;
     }
@@ -567,7 +567,7 @@ static api_error json_object_generic_get(json *object, const char *key, void *va
 {
     int i = 0;
 
-    if (!JSON_HAS_TYPE(object, JSON_TYPE_OBJECT) || !key || !val_ptr)
+    if (!JSON_IS_OBJECT(object) || !key || !val_ptr)
     {
         return API_ERROR_INPUT_INVALID;
     }
@@ -617,7 +617,7 @@ static int json_object_generic_put(json *object, const char *key, const void *va
     obj_pair *pair = NULL;
 
     // TODO error handling a mess
-    if (!JSON_HAS_TYPE(object, JSON_TYPE_OBJECT))
+    if (!JSON_IS_OBJECT(object))
     {
         return API_ERROR_NOT_OBJECT; // should be input invalid maybe
     }
@@ -713,7 +713,7 @@ void json_object_remove_member(json *object, const char *key)
     int j = 0;
     int num_rem = 0;  
 
-    if (!JSON_HAS_TYPE(object, JSON_TYPE_OBJECT) || !key)
+    if (!JSON_IS_OBJECT(object) || !key)
         return;
 
     for (i = 0; i < object->cnt; i++)
@@ -743,7 +743,7 @@ static bool json_array_has_value(json *array, const void *val, json_type type)
 {
     int i = 0;
 
-    if (!JSON_HAS_TYPE(array, JSON_TYPE_ARRAY))
+    if (!JSON_IS_ARRAY(array))
         return false;
 
     for (i = 0; i < array->cnt; i++)
@@ -788,7 +788,7 @@ bool json_array_has_string(json *array, const char *string)
  */
 json *json_array_get(json *array, int idx)
 {
-    if (JSON_HAS_TYPE(array, JSON_TYPE_ARRAY) 
+    if (JSON_IS_ARRAY(array) 
         && IDX_WITHIN_BOUNDS(array, idx))
     {
         return array->elements[idx];
@@ -799,7 +799,7 @@ json *json_array_get(json *array, int idx)
 
 static api_error json_array_generic_get(json *array, int idx, void *val_ptr, json_type type)
 {
-    if (!JSON_HAS_TYPE(array, JSON_TYPE_ARRAY) 
+    if (!JSON_IS_ARRAY(array) 
         || !IDX_WITHIN_BOUNDS(array, idx)
         || !val_ptr)
     {
@@ -856,7 +856,7 @@ static int json_array_index_of(json *array, const void *val, json_type type)
 {
     int i = 0;
 
-    if (!JSON_HAS_TYPE(array, JSON_TYPE_ARRAY))
+    if (!JSON_IS_ARRAY(array))
     {
         return -1;
     }
@@ -901,7 +901,7 @@ int json_array_index_of_string(json *array, const char *str_val)
  */
 static int json_array_generic_add(json *array, int idx, json_type type, const void *val)
 {
-    if (!JSON_HAS_TYPE(array, JSON_TYPE_ARRAY) 
+    if (!JSON_IS_ARRAY(array) 
         || !IDX_WITHIN_BOUNDS(array, idx))
     {
         return API_ERROR_INPUT_INVALID;
@@ -946,7 +946,7 @@ static void json_array_append(json *array, const void *val, json_type type)
 
     assert(NULL == js);
 
-    if (!JSON_HAS_TYPE(array, JSON_TYPE_ARRAY) 
+    if (!JSON_IS_ARRAY(array) 
         || !IS_PRIMITIVE_TYPE(type))
     {
         return;
@@ -995,7 +995,7 @@ void json_array_remove_at(json *array, int idx)
     int   i = 0;
     json *js;
 
-    if (!JSON_HAS_TYPE(array, JSON_TYPE_ARRAY) 
+    if (!JSON_IS_ARRAY(array) 
         || !IDX_WITHIN_BOUNDS(array, idx))
     {
         return;
