@@ -122,6 +122,9 @@ static json *parse_value(json_parser *parser)
         case 'n':
             value = parse_null(parser);
             break;
+        case '\0':
+            value = NULL;
+            break;
         default:
             if (c == '-' || isdigit(c))
                 value = parse_number(parser);
@@ -392,11 +395,19 @@ static json *parse_array(json_parser *parser)
         json *value = NULL;
         char  c;
 
+        parser->depth++;
+        if (parser->depth > JSON_PARSER_MAX_DEPTH)
+        {
+            parser->error = JSON_ERROR_PARSER_MAX_DEPTH_EXCEEDED;
+            goto ERROR;
+        }
+
         array = json_create(JSON_TYPE_ARRAY);
 
         if (json_peek(parser) == ']')
         {
             json_next(parser);
+            parser->depth--;
             return array;
         }
 
@@ -420,6 +431,7 @@ static json *parse_array(json_parser *parser)
             goto ERROR;
         }
         
+        parser->depth--;
         return array;
     }
     else
@@ -500,11 +512,19 @@ static json *parse_object(json_parser *parser)
         obj_pair *pair = NULL;
         char      c;
 
+        parser->depth++;
+        if (parser->depth > JSON_PARSER_MAX_DEPTH)
+        {
+            parser->error = JSON_ERROR_PARSER_MAX_DEPTH_EXCEEDED;
+            goto ERROR;
+        }
+
         object = json_create(JSON_TYPE_OBJECT);
 
         if (json_peek(parser) == '}')
         {
             json_next(parser);
+            parser->depth--;
             return object;
         }
 
@@ -528,6 +548,7 @@ static json *parse_object(json_parser *parser)
             goto ERROR;
         }
 
+        parser->depth--;
         return object;
     }
     else
@@ -558,22 +579,20 @@ json_output *json_parse(const char *json_string)
 
     json_parser_init(&parser, json_string);
 
-    switch (json_peek(&parser))
+    output->root = parse_value(&parser);
+    output->error = parser.error;
+
+    if (output->error == JSON_ERROR_NONE && json_next(&parser) != '\0')
     {
-        case '{':
-            output->root  = parse_object(&parser);
-            output->error = parser.error;
-            break;
-        case '[':
-            output->root  = parse_array(&parser);
-            output->error = parser.error;
-            break;
-        case '\0':
-            break;
-        default:
-            output->error = JSON_ERROR_INVALID_JSON;
-            break;
+        output->error = JSON_ERROR_INVALID_JSON;
     }
+
+    if (output->error)
+    {
+        json_destroy(output->root);
+        output->root = NULL;
+    }
+
     json_parser_destroy(&parser);
     return output;
 }
@@ -586,6 +605,7 @@ static void json_parser_init(json_parser *parser, const char *json_string)
     parser->buffer_idx = 0;
     parser->skip_space = true;
     parser->error = 0;
+    parser->depth = 0;
 }
 
 

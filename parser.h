@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include "json.h"
 
+#define JSON_PARSER_MAX_DEPTH      512
+
 typedef enum json_error
 {
     // the input string should be defined
@@ -17,6 +19,7 @@ typedef enum json_error
     JSON_ERROR_INVALID_ESCAPE_SEQUENCE,
     JSON_ERROR_STRING_HAS_CONTROL_CHAR,
     JSON_ERROR_INVALID_NUM_FORMAT,
+    JSON_ERROR_PARSER_MAX_DEPTH_EXCEEDED,
     ERROR_MEMORY,
 } json_error;
 
@@ -38,6 +41,7 @@ typedef struct json_parser
     json_output  *output;
     bool          skip_space; // TODO don't like the design for this
     int           error;
+    int           depth;
 } json_parser;
 
 
