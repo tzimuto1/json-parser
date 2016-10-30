@@ -411,6 +411,12 @@ static json *parse_array(json_parser *parser)
             return array;
         }
 
+        if (json_peek(parser) == '\0')
+        {
+            parser->error = JSON_ERROR_UNBALANCED_SQUARE_BRACKET;
+            goto ERROR;
+        }
+
         do {
             if (array->cnt == array->alloced)
             {
@@ -420,7 +426,9 @@ static json *parse_array(json_parser *parser)
             }
 
             if (!(value = parse_value(parser)))
+            {
                 goto ERROR;
+            }
 
             array->elements[array->cnt++] = value;
         } while ((c = json_next(parser)) == ',');
@@ -572,6 +580,7 @@ json_output *json_parse(const char *json_string)
     output->root = parse_value(&parser);
     output->error = parser.error;
 
+    // unhandled error cases
     if (output->error == JSON_ERROR_NONE && json_next(&parser) != '\0')
     {
         output->error = JSON_ERROR_INVALID_JSON;

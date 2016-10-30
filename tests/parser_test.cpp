@@ -225,6 +225,19 @@ INSTANTIATE_TEST_CASE_P(parserTests,
 
 
 /* ARRAYS */
+TEST(parserTest, arrays_unterminated)
+{
+    const char  *json_str = "[";
+    json_output *output = json_parse(json_str);
+    json        *root = output->root;
+
+    ASSERT_EQ(NULL, root);
+    ASSERT_TRUE(JSON_ERROR_NONE != output->error);
+
+    json_output_destroy(output);
+}
+
+
 TEST(parserTest, empty_array)
 {
     const char  *json_str = "[]";
@@ -359,6 +372,19 @@ TEST(parserTest, array_recursion_depth_exceeded)
 }
 
 /* OBJECTS */
+TEST(parserTest, objects_unterminated)
+{
+    const char  *json_str = "{";
+    json_output *output = json_parse(json_str);
+    json        *root = output->root;
+
+    ASSERT_EQ(NULL, root);
+    ASSERT_TRUE(JSON_ERROR_NONE != output->error);
+
+    json_output_destroy(output);
+}
+
+
 TEST(parserTest, empty_object)
 {
     const char  *json_str = "{}";
