@@ -42,6 +42,7 @@ static json *parse_value(json_parser *);
 static void  json_parser_init(json_parser *parser, const char *json_string);
 static void  json_parser_destroy(json_parser *);
 static json_output *json_output_new();
+static void  arr_realloc(json *);
 void         json_output_destroy(json_output *jo);
 
 static int   escaped_char2actual(int c);
@@ -333,23 +334,9 @@ static json *parse_string(json_parser *parser)
         parser->skip_space = false;
         string = json_create(JSON_TYPE_STRING);
 
-        if (json_peek(parser) == '"')
-        {
-            string->string_val = (char *) calloc(1, sizeof(char));
-            string->cnt++;
-            json_next(parser);
-            parser->skip_space = true;
-            return string;
-        }
-
         while ((c = json_next(parser)) != '"' && !IS_CONTROL_CHAR(c))
         {
-            if (string->cnt >= string->alloced - 1 )
-            {
-                string->alloced += 10;
-                string->string_val = (char *) realloc(string->string_val, 
-                    sizeof(char) * string->alloced);
-            }
+            arr_realloc(string);
 
             if (c == '\\')
             {
@@ -374,7 +361,7 @@ static json *parse_string(json_parser *parser)
             goto ERROR;
         }
         
-        string->string_val[string->cnt++] = '\0';
+        string->string_val[string->cnt] = '\0';
         parser->skip_space = true;
         return string;
     }
@@ -418,12 +405,7 @@ static json *parse_array(json_parser *parser)
         }
 
         do {
-            if (array->cnt == array->alloced)
-            {
-                array->alloced += 10;
-                array->elements = (json **) realloc(array->elements, 
-                    sizeof(json *) * array->alloced);
-            }
+            arr_realloc(array);
 
             if (!(value = parse_value(parser)))
             {
@@ -528,12 +510,7 @@ static json *parse_object(json_parser *parser)
         }
 
         do {
-            if (object->cnt == object->alloced)
-            {
-                object->alloced += 10;
-                object->members = (obj_pair **) realloc(object->members, 
-                    sizeof(obj_pair *) * object->alloced);
-            }
+            arr_realloc(object);
 
             if (!(pair = parse_pair(parser)))
                 goto ERROR;
@@ -624,6 +601,36 @@ static json_output *json_output_new()
     return output;
 }
 
+
+/*
+ * Reallocate the C arrays used within the json structures 
+ */
+static void arr_realloc(json *js)
+{
+    int sentinel_cnt = JSON_IS_STRING(js) ? 1 : 0;
+
+    if (js->cnt == js->alloced - sentinel_cnt)
+    {
+        js->alloced += 10;
+
+        switch (js->type)
+        {
+            case JSON_TYPE_OBJECT:
+                js->members = (obj_pair **) realloc(js->members, 
+                    sizeof(obj_pair *) * js->alloced);
+                break;
+            case JSON_TYPE_ARRAY:
+                js->elements = (json **) realloc(js->elements, 
+                    sizeof(json *) * js->alloced);
+                break;
+            case JSON_TYPE_STRING:
+                js->string_val = (char *) realloc(js->string_val, 
+                    sizeof(char) * js->alloced);
+            default:
+                break;
+        }
+    }
+}
 
 void json_output_destroy(json_output *jo)
 {

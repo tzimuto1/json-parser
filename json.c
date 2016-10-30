@@ -112,6 +112,13 @@ json *json_create(json_type type)
 
     json *js = (json *) calloc(1, sizeof(json));
     js->type = type;
+
+    if (type == JSON_TYPE_STRING)
+    {
+        js->string_val = (char *) calloc(1, sizeof(char));
+        js->alloced = 1;
+    }
+
     return js;
 }
 

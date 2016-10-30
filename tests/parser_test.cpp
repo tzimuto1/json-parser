@@ -181,6 +181,7 @@ typedef struct str_info
 {
     const char *str;
     const char *str_arr;
+    const int   len;
     json_error  error;
 } str_info;
 
@@ -200,6 +201,10 @@ TEST_P(StringTest, strings)
     {
         ASSERT_EQ(JSON_TYPE_STRING, output->root->elements[0]->type);
         ASSERT_STREQ(info.str, output->root->elements[0]->string_val);
+        ASSERT_EQ(info.len, json_get_size(output->root->elements[0]));
+        // check if the string may have gone beyond bounds
+        ASSERT_LE(output->root->elements[0]->cnt, 
+            output->root->elements[0]->alloced);
     }
 
     json_output_destroy(output);
@@ -208,19 +213,31 @@ TEST_P(StringTest, strings)
 INSTANTIATE_TEST_CASE_P(parserTests,
     StringTest,
     ::testing::Values(
+        // empty string
+        str_info{ "", "[\"\"]", 0, JSON_ERROR_NONE},
         // basic string
-        str_info{ "hello, world", "[\"hello, world\"]", JSON_ERROR_NONE },
+        str_info{ "hello, world", "[\"hello, world\"]", 12, JSON_ERROR_NONE },
+        // long string
+        str_info{ 
+            "12345678901234567890123456789012",
+            "[\"12345678901234567890123456789012\"]",
+            32, JSON_ERROR_NONE
+        },
         // string with escaped character: " \ / b f n r t
-        str_info{ "\"\\/\b\f\n\r\t", "[\"\\\"\\\\\\/\\b\\f\\n\\r\\t\"]", JSON_ERROR_NONE },
+        str_info{ 
+            "\"\\/\b\f\n\r\t", 
+            "[\"\\\"\\\\\\/\\b\\f\\n\\r\\t\"]", 
+            8, JSON_ERROR_NONE 
+        },
         // string without a cloging quote
-        str_info{ NULL, "[\"hello, world]", JSON_ERROR_UNBALANCED_QUOTE },
+        str_info{ NULL, "[\"hello, world]", 0, JSON_ERROR_UNBALANCED_QUOTE },
         // string with invalid escape sequence
-        str_info{ NULL, "[\"\\u\"]", JSON_ERROR_INVALID_ESCAPE_SEQUENCE },
-        str_info{ NULL, "[\"\\m\"]", JSON_ERROR_INVALID_ESCAPE_SEQUENCE },
+        str_info{ NULL, "[\"\\u\"]", 0, JSON_ERROR_INVALID_ESCAPE_SEQUENCE },
+        str_info{ NULL, "[\"\\m\"]", 0, JSON_ERROR_INVALID_ESCAPE_SEQUENCE },
         // string with a control character
-        str_info{ NULL, "[\"\0\"]", JSON_ERROR_UNBALANCED_QUOTE },
-        str_info{ NULL, "[\"\037\"]", JSON_ERROR_STRING_HAS_CONTROL_CHAR },
-        str_info{ NULL, "[\"\177\"]", JSON_ERROR_STRING_HAS_CONTROL_CHAR }
+        str_info{ NULL, "[\"\0\"]", 0, JSON_ERROR_UNBALANCED_QUOTE },
+        str_info{ NULL, "[\"\037\"]", 0, JSON_ERROR_STRING_HAS_CONTROL_CHAR },
+        str_info{ NULL, "[\"\177\"]", 0, JSON_ERROR_STRING_HAS_CONTROL_CHAR }
         ));
 
 
