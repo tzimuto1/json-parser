@@ -102,6 +102,13 @@ static json *parse_value(json_parser *parser)
     json *value = NULL;
     char  c = json_peek(parser);
 
+    parser->depth++;
+    if (parser->depth > JSON_PARSER_MAX_DEPTH)
+    {
+        parser->error = JSON_ERROR_PARSER_MAX_DEPTH_EXCEEDED;
+        return NULL;
+    }
+
     switch (c)
     {
         case '{':
@@ -133,6 +140,7 @@ static json *parse_value(json_parser *parser)
             break;      
     }
 
+    parser->depth--;
     return value;
 }
 
@@ -395,19 +403,11 @@ static json *parse_array(json_parser *parser)
         json *value = NULL;
         char  c;
 
-        parser->depth++;
-        if (parser->depth > JSON_PARSER_MAX_DEPTH)
-        {
-            parser->error = JSON_ERROR_PARSER_MAX_DEPTH_EXCEEDED;
-            goto ERROR;
-        }
-
         array = json_create(JSON_TYPE_ARRAY);
 
         if (json_peek(parser) == ']')
         {
             json_next(parser);
-            parser->depth--;
             return array;
         }
 
@@ -431,7 +431,6 @@ static json *parse_array(json_parser *parser)
             goto ERROR;
         }
         
-        parser->depth--;
         return array;
     }
     else
@@ -512,19 +511,11 @@ static json *parse_object(json_parser *parser)
         obj_pair *pair = NULL;
         char      c;
 
-        parser->depth++;
-        if (parser->depth > JSON_PARSER_MAX_DEPTH)
-        {
-            parser->error = JSON_ERROR_PARSER_MAX_DEPTH_EXCEEDED;
-            goto ERROR;
-        }
-
         object = json_create(JSON_TYPE_OBJECT);
 
         if (json_peek(parser) == '}')
         {
             json_next(parser);
-            parser->depth--;
             return object;
         }
 
@@ -548,7 +539,6 @@ static json *parse_object(json_parser *parser)
             goto ERROR;
         }
 
-        parser->depth--;
         return object;
     }
     else

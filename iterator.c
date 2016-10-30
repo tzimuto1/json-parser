@@ -2,8 +2,8 @@
 
 #include "parser.h"
 
-#define CHAR_IS_WHITESPACE(c)    ((c) == '\t' || (c) == '\n' || (c) == 11 || \
-                                  (c) == '\f' || (c) == '\r' || (c) == 32)
+#define CHAR_IS_WHITESPACE(c)    ((c) == '\t' || (c) == '\n' || \
+                                  (c) == '\r' || (c) == ' ')
 
 /*
  * Advance forward until the next unconsumed character is no stace except when

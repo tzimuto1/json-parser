@@ -65,6 +65,22 @@ TEST(parserTest, empty_input)
 }
 
 
+TEST(parserTest, white_space_test)
+{
+    const char  *json_str = "\t\n\r ";
+    json_output *output = json_parse(json_str);
+
+    ASSERT_EQ(JSON_ERROR_NONE, output->error);
+    json_output_destroy(output);
+
+    // clasified as whitespace but not allowed outside of strings in JSON
+    json_str = "\f\v";
+    output = json_parse(json_str);
+    ASSERT_EQ(JSON_ERROR_INVALID_JSON, output->error);
+    json_output_destroy(output);
+}
+
+
 TEST(parserTest, general_primitives)
 {
     int          i = 0;
