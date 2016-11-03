@@ -56,6 +56,10 @@ static int32_t char2hex(int32_t c);
 #define CHAR2NUM(c)              ((c) - '0')
 #define IS_CONTROL_CHAR(c)       ((c) < 32)
 
+/*
+ The macro sets the error if it has not been set. In some cases we just set a 
+ generic error, JSON_ERROR_INVALID_JSON is we can't determine the error.
+*/
 #define SET_PARSER_ERROR(p, e)   p->error = p->error ? p->error : e
 
 
@@ -480,6 +484,7 @@ static json *parse_array(json_parser *parser)
 
             if (!(value = parse_value(parser)))
             {
+                SET_PARSER_ERROR(parser, JSON_ERROR_INVALID_JSON);
                 goto ERROR;
             }
 
@@ -540,7 +545,10 @@ static obj_pair *parse_pair(json_parser *parser)
     if (json_next(parser) == ':')
     {
         if (!(value = parse_value(parser)))
+        {
+            SET_PARSER_ERROR(parser, JSON_ERROR_INVALID_JSON);
             goto ERROR;
+        }
 
         pair->key = key;
         pair->value = value;
@@ -586,7 +594,10 @@ static json *parse_object(json_parser *parser)
             arr_realloc(object);
 
             if (!(pair = parse_pair(parser)))
+            {
+                SET_PARSER_ERROR(parser, JSON_ERROR_INVALID_JSON);
                 goto ERROR;
+            }
 
             object->members[object->cnt++] = pair;
         } while ((c = json_next(parser)) == ',');
