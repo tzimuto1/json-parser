@@ -679,10 +679,18 @@ TEST_P(Json2StringTest, all_tests)
     json_output *output = json_parse(jd.input_str);
 
     ASSERT_NE((json_output *) NULL, output);
-    ASSERT_NE((json *) NULL, output->root);
 
-    output_str = json2string(output->root, 0);
-    ASSERT_STREQ(jd.exp_output_str, output_str);
+    if (jd.input_str[0])
+    {
+        ASSERT_NE((json *) NULL, output->root);
+
+        output_str = json2string(output->root, 0);
+        ASSERT_STREQ(jd.exp_output_str, output_str);
+    }
+    else
+    {
+        ASSERT_EQ(NULL, output->root);
+    }
 
     free(output_str);
     json_output_destroy(output);
@@ -691,6 +699,13 @@ TEST_P(Json2StringTest, all_tests)
 INSTANTIATE_TEST_CASE_P(json2stringTests,
     Json2StringTest,
     ::testing::Values(
+        // empty string
+        json_data{ "", "" },
+        // lone primitives
+        json_data{ "1.23", "1.230000" },
+        json_data{ "true", "true" },
+        json_data{ "null", "null" },
+        json_data{ "\"string\"", "\"string\"" },
         // empty array
         json_data{ "[]", "[]" },
         // simple array with integers
@@ -710,6 +725,8 @@ INSTANTIATE_TEST_CASE_P(json2stringTests,
             "{\"a\":1.000000, \"b\":true, \"c\":null, \"d\":\"string\"}" },
         // nested json values
         json_data{ "{\"a\":1,\"b\":{\"c\":[1,2,3,{\"d\":\"d\"}]}}", 
-            "{\"a\":1.000000, \"b\":{\"c\":[1.000000, 2.000000, 3.000000, {\"d\":\"d\"}]}}" }
+            "{\"a\":1.000000, \"b\":{\"c\":[1.000000, 2.000000, 3.000000, {\"d\":\"d\"}]}}" },
+        // json with unicode
+        json_data{ "[\"TSON \u00a9\"]", "[\"TSON ©\"]"}
         ));
 
