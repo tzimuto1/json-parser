@@ -15,7 +15,7 @@ static bool json_is_equal(json *js, const void *val, json_type type);
 static void json_shallow_copy(json *js, const void *val_ptr, json_type type);
 static int _json2string(json *js, string_buf *buf, int indent);
 static void string_buf_append(string_buf *buf, const char *fmt, ...);
-static char *string2escaped_string(const char *str);
+static unsigned char *string2escaped_string(const unsigned char *str);
 
 static void pair_destroy(obj_pair *pair);
 static api_error json_object_generic_get(json *object, const char *key, void *val_ptr, json_type type);
@@ -45,8 +45,8 @@ static bool json_is_equal(json *js, const void *val, json_type type)
         case JSON_TYPE_BOOLEAN:
             return (js->bool_val == (*(bool *) val));
         case JSON_TYPE_STRING:
-            return (strncmp(js->string_val, 
-                (char *) val, strlen(js->string_val) + 1) == 0);
+            return (strncmp((char *)js->string_val, 
+                (char *) val, strlen((char *) js->string_val) + 1) == 0);
         default: // not currently supporting arrays and objects
             return false;
     }
@@ -96,7 +96,7 @@ static void json_shallow_copy(json *js, const void *val_ptr, json_type type)
             *(bool *) val_ptr = js->bool_val;
             break;
         case JSON_TYPE_STRING: // no string duplication, hence shallow copying
-            *(char **) val_ptr = js->string_val;
+            *(unsigned char **) val_ptr = js->string_val;
             break;
         default:
             break; 
@@ -115,7 +115,7 @@ json *json_create(json_type type)
 
     if (type == JSON_TYPE_STRING)
     {
-        js->string_val = (char *) calloc(1, sizeof(char));
+        js->string_val = (unsigned char *) calloc(1, sizeof(unsigned char));
         js->alloced = 1;
     }
 
@@ -141,8 +141,8 @@ json *json_full_create(json_type type, const void *val)
             js->bool_val = *(bool *) val;
             break;
         case JSON_TYPE_STRING:
-            js->string_val = strdup((char *) val);
-            js->cnt = strlen(js->string_val) + 1;
+            js->string_val = (unsigned char *) strdup((char *) val);
+            js->cnt = strlen((char *) js->string_val) + 1;
             break;
         default:
             break;
@@ -230,18 +230,18 @@ void json_destroy(json *js)
 
 /*****************************************************************************/
 
-static char *string2escaped_string(const char *str)
+static unsigned char *string2escaped_string(const unsigned char *str)
 {
-    int   str_len = strlen(str);
-    char *escaped_str = NULL;
-    char *e_str = NULL;
+    int            str_len = strlen((char *)str);
+    unsigned char *escaped_str = NULL;
+    unsigned char *e_str = NULL;
 
     if (!str)
     {
         return NULL;
     }
 
-    escaped_str = (char *) malloc(sizeof(char) * (2 * str_len + 1));
+    escaped_str = (unsigned char *) malloc(sizeof(unsigned char) * (2 * str_len + 1));
     e_str = escaped_str;
 
     for ( ; *str; str++)
@@ -332,7 +332,7 @@ static int _json2string(json *js, string_buf *buf, int indent)
         {
             json_obj_iter it;
             obj_pair *pair = NULL;
-            char     *escaped_key = NULL;      
+            unsigned char     *escaped_key = NULL;      
 
             string_buf_append(buf, "%c", '{');
 
@@ -385,7 +385,7 @@ static int _json2string(json *js, string_buf *buf, int indent)
         }
         case JSON_TYPE_STRING:
         {
-            char *escaped_str = NULL;
+            unsigned char *escaped_str = NULL;
             if (!(escaped_str = string2escaped_string(js->string_val)))
             {
                 return API_ERROR_INPUT_INVALID;
@@ -472,7 +472,7 @@ bool json_object_has_key(json *object, const char *key)
 
     for (i = 0; i < object->cnt; i++)
     {
-        if (strcmp(key, object->members[i]->key) == 0)
+        if (strcmp(key, (char *) object->members[i]->key) == 0)
             return true;
     }
 
@@ -536,7 +536,7 @@ json *json_object_get(json *object, const char *key)
 
     for (i = 0; i < object->cnt; i++)
     {
-        if (strcmp(key, object->members[i]->key) == 0)
+        if (strcmp(key, (char *) object->members[i]->key) == 0)
             return object->members[i]->value;
     }
 
@@ -582,7 +582,7 @@ static api_error json_object_generic_get(json *object, const char *key, void *va
     for (i = 0; i < object->cnt; i++)
     {
         if (JSON_HAS_TYPE(object->members[i]->value, type) 
-            && (strcmp(key, object->members[i]->key) == 0))
+            && (strcmp(key, (char *) object->members[i]->key) == 0))
         {
             json_shallow_copy(object->members[i]->value, val_ptr, type);
             return API_ERROR_NONE;
@@ -641,7 +641,7 @@ static int json_object_generic_put(json *object, const char *key, const void *va
 
     for (i = 0; i < object->cnt; i++)
     {
-        if (strcmp(key, object->members[i]->key) == 0)
+        if (strcmp(key, (char *) object->members[i]->key) == 0)
         {
             json_destroy(object->members[i]->value);
             object->members[i]->value = json_full_create(type, val);
@@ -650,7 +650,7 @@ static int json_object_generic_put(json *object, const char *key, const void *va
     }
 
     pair = (obj_pair *) calloc(1, sizeof(obj_pair));
-    pair->key = strdup(key);
+    pair->key = (unsigned char *) strdup(key);
 
     if (IS_PRIMITIVE_TYPE(type))
     {
@@ -725,7 +725,7 @@ void json_object_remove_member(json *object, const char *key)
 
     for (i = 0; i < object->cnt; i++)
     {
-        if (strcmp(key, object->members[i]->key) == 0)
+        if (strcmp(key, (char *)object->members[i]->key) == 0)
         {
             pair_destroy(object->members[i]);
 

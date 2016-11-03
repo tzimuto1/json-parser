@@ -288,19 +288,19 @@ TEST(json_obj_iterTest, basic)
     pair = json_obj_next(&it);
     ASSERT_TRUE(pair != json_obj_end(&it));
     value = pair->value;
-    EXPECT_STREQ("a", pair->key);
+    EXPECT_STREQ("a", (char *)pair->key);
     EXPECT_TRUE(json_is_equal2string(value, "Hello World"));
 
     pair = json_obj_next(&it);
     ASSERT_TRUE(pair != json_obj_end(&it));
     value = pair->value;
-    EXPECT_STREQ("b", pair->key);
+    EXPECT_STREQ("b", (char *) pair->key);
     EXPECT_TRUE(json_is_equal2boolean(value, true));
 
     pair = json_obj_next(&it);
     ASSERT_TRUE(pair != json_obj_end(&it));
     value = pair->value;
-    EXPECT_STREQ("c", pair->key);
+    EXPECT_STREQ("c", (char *) pair->key);
     EXPECT_TRUE(json_is_equal2number(value, 3.14));
 
     pair = json_obj_next(&it);
@@ -376,7 +376,7 @@ TEST(json_array_getTest, basic)
 
     js = json_array_get(array, 2);
     ASSERT_TRUE(JSON_IS_STRING(js));
-    ASSERT_STREQ("true", js->string_val);
+    ASSERT_STREQ("true", (char *) js->string_val);
 
     json_output_destroy(output);
 }
@@ -480,7 +480,7 @@ TEST(json_array_add_stringTest, basic)
     rv = json_array_add_string(array, 1, str_val);
     ASSERT_EQ(API_ERROR_NONE, rv);
     ASSERT_EQ(JSON_TYPE_STRING, array->elements[1]->type);
-    ASSERT_STREQ(str_val, array->elements[1]->string_val);
+    ASSERT_STREQ(str_val, (char *) array->elements[1]->string_val);
     ASSERT_EQ(strlen(str_val) + 1, json_get_size(array->elements[1]));
 
     json_output_destroy(output);
@@ -580,8 +580,8 @@ TEST(json_array_append_stringTest, basic)
 
     js = array->elements[array->cnt - 1];
     ASSERT_EQ(JSON_TYPE_STRING, js->type);
-    ASSERT_STREQ(test_str, js->string_val);
-    ASSERT_EQ(strlen(test_str), strlen(js->string_val));
+    ASSERT_STREQ(test_str, (char *) js->string_val);
+    ASSERT_EQ(strlen(test_str), strlen((char *) js->string_val));
 
     json_output_destroy(output);
 }

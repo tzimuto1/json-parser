@@ -13,7 +13,8 @@ USER_DIR = ..
 CPPFLAGS += -isystem $(GTEST_DIR)/include -I $(USER_DIR)
 
 # Flags passed to the C++ compiler.
-CXXFLAGS += -g -Wall -Wextra -Werror -pthread -std=gnu++11 -DTEST_MODE
+CXXFLAGS += -g -Wall -Wextra -Werror -pthread -std=gnu++11 -DTEST_MODE 
+#-DDEBUG
 
 # All tests produced by this Makefile.  Remember to add new tests you
 # created to the list.
@@ -74,17 +75,17 @@ iterator_test.o : iterator_test.cpp $(GTEST_HEADERS)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c iterator_test.cpp
 
 iterator_test : iterator_test.o iterator.o gtest_main.a
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $^ -o $@
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $^ $(USER_DIR)/utf8proc/libutf8proc.a -o $@
 
 parser_test.o : parser_test.cpp $(GTEST_HEADERS)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c parser_test.cpp
 
-parser_test : parser_test.o parser.o json.o iterator.o gtest_main.a
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $^ -o $@
+parser_test : parser_test.o parser.o json.o iterator.o gtest_main.a 
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $^ $(USER_DIR)/utf8proc/libutf8proc.a -o $@
 
 
 json_api_test.o : json_api_test.cpp $(USER_DIR)/json.h $(GTEST_HEADERS)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c json_api_test.cpp
 
 json_api_test : json_api_test.o parser.o json.o iterator.o gtest_main.a
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $^ -o $@
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $^ $(USER_DIR)/utf8proc/libutf8proc.a -o $@

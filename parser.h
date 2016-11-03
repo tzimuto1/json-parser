@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include "json.h"
+#include "utf8proc/utf8proc.h"
 
 #define JSON_PARSER_MAX_DEPTH      512
 
@@ -34,7 +35,7 @@ typedef struct
 typedef struct json_parser 
 {
     // buffer specific fields
-    char         *buffer;
+    unsigned char *buffer;
     int           buffer_sz;
     int           buffer_idx;
 

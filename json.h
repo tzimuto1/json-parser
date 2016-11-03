@@ -43,8 +43,8 @@ typedef struct json_object_pair obj_pair;
 
 /* the key-value pair for JSON objects */
 struct json_object_pair {
-    char *key;
-    json *value;
+    unsigned char *key;
+    json          *value;
 };
 
 /* json value object */
@@ -58,13 +58,13 @@ struct JSON
         json      **elements; // used for arrays
         double      num_val; // used for numbers
         bool        bool_val; // used for boolean
-        char       *string_val; // used for strings    
+        unsigned char *string_val; // used for strings    
     };
 };
 
 typedef struct json_obj_iter {
     json *obj;
-    int idx;
+    int   idx;
 } json_obj_iter;
 
 // TODO consolidate string not found and number not found

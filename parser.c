@@ -36,7 +36,7 @@ static json *parse_number(json_parser *);
 static json *parse_boolean(json_parser *, bool);
 static json *parse_null(json_parser *);
 static obj_pair *parse_pair(json_parser *);
-static char *parse_object_key(json_parser *);
+static unsigned char *parse_object_key(json_parser *);
 static json *parse_value(json_parser *);
 
 static void  json_parser_init(json_parser *parser, const char *json_string);
@@ -45,7 +45,8 @@ static json_output *json_output_new();
 static void  arr_realloc(json *);
 void         json_output_destroy(json_output *jo);
 
-static int   escaped_char2actual(int c);
+static int32_t escaped_chars2actual(json_parser *parser);
+static int32_t char2hex(int32_t c);
 
 
 /* UTILITIES */
@@ -53,10 +54,49 @@ static int   escaped_char2actual(int c);
 #define parse_false(p)           parse_boolean(p, false)
 
 #define CHAR2NUM(c)              ((c) - '0')
-#define IS_CONTROL_CHAR(c)       ((c) < 32 ||  (c) == 127)
+#define IS_CONTROL_CHAR(c)       ((c) < 32)
 
-static int escaped_char2actual(int c)
+#define SET_PARSER_ERROR(p, e)   p->error = p->error ? p->error : e
+
+
+static int32_t char2hex(int32_t c)
 {
+    if (isdigit(c))
+    {
+        return CHAR2NUM(c);
+    }
+
+    switch (c)
+    {
+        case 'A': case 'a':
+            c = 0xA;
+            break;
+        case 'B': case 'b':
+            c = 0xB;
+            break;
+        case 'C': case 'c':
+            c = 0xC;
+            break;
+        case 'D': case 'd':
+            c = 0xD;
+            break;
+        case 'E': case 'e':
+            c = 0xE;
+            break;
+        case 'F': case 'f':
+            c = 0xF;
+            break;
+        default:
+            c = -1;
+            break;
+    }
+    return c;
+}
+
+static int32_t escaped_chars2actual(json_parser *parser)
+{
+    int32_t c = json_next(parser);
+
     switch (c)
     {
         case '"':
@@ -78,10 +118,36 @@ static int escaped_char2actual(int c)
         case 't':
             c = '\t';
             break;
-        case 'u': // TODO not currently supported
-        default:
-            c = -1;
+        case 'u':
+        {
+            int     i;
+            int32_t c2 = 0;
+
+            for (i = 0; i < 4; i++)
+            {
+                c = char2hex(json_next(parser));
+
+                if (c < 0)
+                {
+                    SET_PARSER_ERROR(parser, 1);
+                    return -1;
+                }
+
+                c2 += (c << (12 - 4 * i));
+            }
+
+            if (!utf8is_codepoint_valid(c2))
+            {
+                SET_PARSER_ERROR(parser, 1);
+                return -1;
+            }
+
+            c = c2;
+        }
             break;
+        default:
+            SET_PARSER_ERROR(parser, 1);
+            return -1;
     }
     return c;
 }
@@ -100,8 +166,8 @@ static json *parse_value(json_parser *parser)
     LOGFUNC();
     // The error treatment will be done by the corresponding parser_* functions
 
-    json *value = NULL;
-    char  c = json_peek(parser);
+    json    *value = NULL;
+    int32_t  c = json_peek(parser);
 
     parser->depth++;
     if (parser->depth > JSON_PARSER_MAX_DEPTH)
@@ -154,7 +220,7 @@ static json *parse_value(json_parser *parser)
 static json *parse_null(json_parser *parser)
 {
     LOGFUNC();
-    if (is_string_matched(parser, "null"))
+    if (is_string_matched(parser, (unsigned char *) "null"))
     {
         json *null_obj = json_create(JSON_TYPE_NULL);
         return null_obj;
@@ -176,7 +242,7 @@ static json *parse_boolean(json_parser *parser, bool bool_val)
     LOGFUNC();
     const char *bool_str = (bool_val) ? "true" : "false";
     json *bool_obj = NULL;
-    if (is_string_matched(parser, bool_str))
+    if (is_string_matched(parser, (unsigned char *)bool_str))
     {
         bool_obj = json_create(JSON_TYPE_BOOLEAN);
         bool_obj->bool_val = bool_val;
@@ -209,7 +275,7 @@ static json *parse_boolean(json_parser *parser, bool bool_val)
 static json *parse_number(json_parser *parser)
 {
     LOGFUNC();
-    char    c;
+    int32_t c;
     int     base_sign = 1;
     int     exp_sign = 1;
     double  num_value = 0;
@@ -329,25 +395,25 @@ static json *parse_string(json_parser *parser)
     json *string = NULL;
     if (json_next(parser) == '"')
     {
-        char c;
+        int32_t c;
 
         parser->skip_space = false;
         string = json_create(JSON_TYPE_STRING);
 
-        while ((c = json_next(parser)) != '"' && !IS_CONTROL_CHAR(c))
+        while ((c = json_next(parser)) != '"' && c != -1 && !IS_CONTROL_CHAR(c))
         {
             arr_realloc(string);
 
             if (c == '\\')
             {
-                if ((c = escaped_char2actual(json_next(parser))) < 0)
+                if ((c = escaped_chars2actual(parser)) < 0)
                 {
                     parser->error = JSON_ERROR_INVALID_ESCAPE_SEQUENCE;
                     goto ERROR;
                 }
             }
 
-            string->string_val[string->cnt++] = c;
+            string->cnt += utf8encode(c, string->string_val + string->cnt);
         }
 
         if (c != '"')
@@ -356,7 +422,9 @@ static json *parse_string(json_parser *parser)
                 parser->error = JSON_ERROR_UNBALANCED_QUOTE;
             else if (IS_CONTROL_CHAR(c))
                 parser->error = JSON_ERROR_STRING_HAS_CONTROL_CHAR;
-            else // this should not happen
+            else if (c == -1)
+            { /* do nothing */ }
+            else
                 parser->error = JSON_ERROR_INVALID_STRING;
             goto ERROR;
         }
@@ -387,8 +455,8 @@ static json *parse_array(json_parser *parser)
     json *array = NULL;
     if (json_next(parser) == '[')
     {
-        json *value = NULL;
-        char  c;
+        json    *value = NULL;
+        int32_t  c;
 
         array = json_create(JSON_TYPE_ARRAY);
 
@@ -434,14 +502,16 @@ ERROR:
 }
 
 // helper to parse_pair
-static char *parse_object_key(json_parser *parser)
+static unsigned char *parse_object_key(json_parser *parser)
 {
     LOGFUNC();
-    char *key    = NULL;
+    unsigned char *key = NULL;
     json *string = parse_string(parser);
 
     if (string)
-        key = strdup(string->string_val);
+    {
+        key = (unsigned char *) strdup((char *) string->string_val);
+    }
 
     json_destroy(string);
     return key;
@@ -457,7 +527,7 @@ static obj_pair *parse_pair(json_parser *parser)
     LOGFUNC();
     obj_pair *pair = NULL;
     json     *value = NULL;
-    char     *key = NULL;
+    unsigned char *key = NULL;
 
     pair = (obj_pair *) calloc(1, sizeof(obj_pair));
 
@@ -499,7 +569,7 @@ static json *parse_object(json_parser *parser)
     if (json_next(parser) == '{')
     {
         obj_pair *pair = NULL;
-        char      c;
+        int32_t   c;
 
         object = json_create(JSON_TYPE_OBJECT);
 
@@ -542,6 +612,7 @@ ERROR:
 */
 json_output *json_parse(const char *json_string)
 {
+    LOGFUNC();
     json_parser   parser;
     json_output  *output;
 
@@ -576,7 +647,7 @@ json_output *json_parse(const char *json_string)
 
 static void json_parser_init(json_parser *parser, const char *json_string)
 {
-    parser->buffer = strdup(json_string);
+    parser->buffer = (unsigned char *) strdup(json_string);
     parser->buffer_sz = strlen(json_string) + 1;
     parser->buffer_idx = 0;
     parser->skip_space = true;
@@ -607,9 +678,13 @@ static json_output *json_output_new()
  */
 static void arr_realloc(json *js)
 {
-    int sentinel_cnt = JSON_IS_STRING(js) ? 1 : 0;
-
-    if (js->cnt == js->alloced - sentinel_cnt)
+    /*
+    For strings we should have enough space for terminal byte and 4 unicode bytes
+    */
+    if ((JSON_IS_STRING(js) 
+        && (js->cnt > js->alloced - BYTES_PER_UNICODE_CHAR - 1)) 
+        || (!JSON_IS_STRING(js) 
+            && (js->cnt == js->alloced)))
     {
         js->alloced += 10;
 
@@ -624,8 +699,8 @@ static void arr_realloc(json *js)
                     sizeof(json *) * js->alloced);
                 break;
             case JSON_TYPE_STRING:
-                js->string_val = (char *) realloc(js->string_val, 
-                    sizeof(char) * js->alloced);
+                js->string_val = (unsigned char *) realloc(js->string_val, 
+                    sizeof(unsigned char) * js->alloced);
             default:
                 break;
         }

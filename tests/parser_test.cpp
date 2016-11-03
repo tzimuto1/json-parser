@@ -37,7 +37,6 @@
  *  - nested incorrect: recursion depth exceeded
  */
 
-
 /* BASIC */
 TEST(parserTest, null_input)
 {
@@ -89,7 +88,7 @@ TEST(parserTest, general_primitives)
         { JSON_TYPE_NUMBER, 0, 0, { .num_val = 3.14} },
         { JSON_TYPE_BOOLEAN, 0, 0, { .bool_val = true } },
         { JSON_TYPE_NULL, 0, 0, { .string_val = NULL } },
-        { JSON_TYPE_STRING, 0, 0, { .string_val = (char *)"json" } },
+        { JSON_TYPE_STRING, 0, 0, { .string_val = (unsigned char *) "json" } },
     };
     int          num_prims = sizeof(primitives) / sizeof(char *);
     json_output *output = NULL;
@@ -114,7 +113,7 @@ TEST(parserTest, general_primitives)
                 ASSERT_TRUE(JSON_IS_NULL(output->root));
                 break;
             case JSON_TYPE_STRING:
-                ASSERT_TRUE(json_is_equal2string(output->root, res.string_val));
+                ASSERT_TRUE(json_is_equal2string(output->root, (char *) res.string_val));
                 break;
             default:
                 ASSERT_TRUE(false);
@@ -200,7 +199,7 @@ TEST_P(StringTest, strings)
     if (output->error == JSON_ERROR_NONE)
     {
         ASSERT_EQ(JSON_TYPE_STRING, output->root->elements[0]->type);
-        ASSERT_STREQ(info.str, output->root->elements[0]->string_val);
+        ASSERT_STREQ(info.str, (char *) output->root->elements[0]->string_val);
         ASSERT_EQ(info.len, json_get_size(output->root->elements[0]));
         // check if the string may have gone beyond bounds
         ASSERT_LE(output->root->elements[0]->cnt, 
@@ -237,7 +236,9 @@ INSTANTIATE_TEST_CASE_P(parserTests,
         // string with a control character
         str_info{ NULL, "[\"\0\"]", 0, JSON_ERROR_UNBALANCED_QUOTE },
         str_info{ NULL, "[\"\037\"]", 0, JSON_ERROR_STRING_HAS_CONTROL_CHAR },
-        str_info{ NULL, "[\"\177\"]", 0, JSON_ERROR_STRING_HAS_CONTROL_CHAR }
+        str_info{ NULL, "[\"\f\"]", 0, JSON_ERROR_STRING_HAS_CONTROL_CHAR },
+        // strin with unicode
+        str_info{ "new\xC2\xA0line", "[\"new\\u00A0line\"]", 9, JSON_ERROR_NONE}
         ));
 
 
@@ -291,7 +292,7 @@ TEST(parserTest, simple_array)
     ASSERT_EQ(false, root->elements[2]->bool_val);
 
     ASSERT_EQ(JSON_TYPE_STRING, root->elements[3]->type);
-    ASSERT_STREQ("hello world", root->elements[3]->string_val);
+    ASSERT_STREQ("hello world", (char *) root->elements[3]->string_val);
 
     json_output_destroy(output);
 }
@@ -429,19 +430,19 @@ TEST(parserTest, simple_object)
     ASSERT_EQ(4, root->cnt);
     ASSERT_TRUE(NULL != root->members);
 
-    ASSERT_STREQ("number", root->members[0]->key);
+    ASSERT_STREQ("number", (char *) root->members[0]->key);
     ASSERT_EQ(JSON_TYPE_NUMBER, root->members[0]->value->type);
     ASSERT_EQ(3.14, root->members[0]->value->num_val);
 
-    ASSERT_STREQ("string", root->members[1]->key);
+    ASSERT_STREQ("string", (char *) root->members[1]->key);
     ASSERT_EQ(JSON_TYPE_STRING, root->members[1]->value->type);
-    ASSERT_STREQ("pi", root->members[1]->value->string_val);
+    ASSERT_STREQ("pi", (char *) root->members[1]->value->string_val);
 
-    ASSERT_STREQ("boolean", root->members[2]->key);
+    ASSERT_STREQ("boolean", (char *) root->members[2]->key);
     ASSERT_EQ(JSON_TYPE_BOOLEAN, root->members[2]->value->type);
     ASSERT_EQ(false, root->members[2]->value->bool_val);
 
-    ASSERT_STREQ("null", root->members[3]->key);
+    ASSERT_STREQ("null", (char *) root->members[3]->key);
     ASSERT_EQ(JSON_TYPE_NULL, root->members[3]->value->type);
 
     json_output_destroy(output);

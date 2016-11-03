@@ -3,7 +3,7 @@ objects = parser.o json.o iterator.o tson.o
 USER_DIR = ../..
 
 all : $(objects)
-	gcc -o tson tson.o parser.o json.o iterator.o -lm
+	gcc -o tson tson.o parser.o json.o iterator.o $(USER_DIR)/utf8proc/libutf8proc.a -lm
 
 tson.o : tson.c
 
