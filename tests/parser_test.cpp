@@ -231,7 +231,8 @@ INSTANTIATE_TEST_CASE_P(parserTests,
         // string without a cloging quote
         str_info{ NULL, "[\"hello, world]", 0, JSON_ERROR_UNBALANCED_QUOTE },
         // string with invalid escape sequence
-        str_info{ NULL, "[\"\\u\"]", 0, JSON_ERROR_INVALID_ESCAPE_SEQUENCE },
+        str_info{ NULL, "[\"\\u\"]", 0, 
+            JSON_ERROR_INVALID_UNICODE_ESCAPE_SEQUENCE },
         str_info{ NULL, "[\"\\m\"]", 0, JSON_ERROR_INVALID_ESCAPE_SEQUENCE },
         // string with a control character
         str_info{ NULL, "[\"\0\"]", 0, JSON_ERROR_UNBALANCED_QUOTE },

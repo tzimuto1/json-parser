@@ -129,7 +129,8 @@ static int32_t escaped_chars2actual(json_parser *parser)
 
                 if (c < 0)
                 {
-                    SET_PARSER_ERROR(parser, 1);
+                    SET_PARSER_ERROR(parser, 
+                        JSON_ERROR_INVALID_UNICODE_ESCAPE_SEQUENCE);
                     return -1;
                 }
 
@@ -138,7 +139,8 @@ static int32_t escaped_chars2actual(json_parser *parser)
 
             if (!utf8is_codepoint_valid(c2))
             {
-                SET_PARSER_ERROR(parser, 1);
+                SET_PARSER_ERROR(parser, 
+                    JSON_ERROR_INVALID_UNICODE_ESCAPE_SEQUENCE);
                 return -1;
             }
 
@@ -146,9 +148,10 @@ static int32_t escaped_chars2actual(json_parser *parser)
         }
             break;
         default:
-            SET_PARSER_ERROR(parser, 1);
+            SET_PARSER_ERROR(parser, JSON_ERROR_INVALID_ESCAPE_SEQUENCE);
             return -1;
     }
+
     return c;
 }
 
@@ -172,7 +175,7 @@ static json *parse_value(json_parser *parser)
     parser->depth++;
     if (parser->depth > JSON_PARSER_MAX_DEPTH)
     {
-        parser->error = JSON_ERROR_PARSER_MAX_DEPTH_EXCEEDED;
+        SET_PARSER_ERROR(parser, JSON_ERROR_PARSER_MAX_DEPTH_EXCEEDED);
         return NULL;
     }
 
@@ -203,7 +206,7 @@ static json *parse_value(json_parser *parser)
             if (c == '-' || isdigit(c))
                 value = parse_number(parser);
             else
-                parser->error = JSON_ERROR_INVALID_JSON;
+                SET_PARSER_ERROR(parser, JSON_ERROR_INVALID_JSON);
             break;      
     }
 
@@ -226,7 +229,7 @@ static json *parse_null(json_parser *parser)
         return null_obj;
     }
 
-    parser->error = JSON_ERROR_INVALID_JSON;
+    SET_PARSER_ERROR(parser, JSON_ERROR_INVALID_JSON);
     return NULL;
 }
 
@@ -249,7 +252,7 @@ static json *parse_boolean(json_parser *parser, bool bool_val)
         return bool_obj;
     }
 
-    parser->error = JSON_ERROR_INVALID_JSON;
+    SET_PARSER_ERROR(parser, JSON_ERROR_INVALID_JSON);
     return NULL;
 }
 
@@ -294,7 +297,7 @@ static json *parse_number(json_parser *parser)
     /* process integer part */
     if (!isdigit(json_peek(parser)))
     {
-        parser->error = JSON_ERROR_INVALID_NUM_FORMAT;
+        SET_PARSER_ERROR(parser, JSON_ERROR_INVALID_NUM_FORMAT);
         goto ERROR;
     }
 
@@ -303,7 +306,7 @@ static json *parse_number(json_parser *parser)
     // make sure that there are no leading zeros
     if (c == '0' && isdigit(json_peek(parser)))
     {
-        parser->error = JSON_ERROR_INVALID_NUM_FORMAT;
+        SET_PARSER_ERROR(parser, JSON_ERROR_INVALID_NUM_FORMAT);
         goto ERROR;
     }
 
@@ -323,7 +326,7 @@ static json *parse_number(json_parser *parser)
         // decimal point MUST be followed by a digit
         if (!isdigit(json_peek(parser)))
         {
-            parser->error = JSON_ERROR_INVALID_NUM_FORMAT;
+            SET_PARSER_ERROR(parser, JSON_ERROR_INVALID_NUM_FORMAT);
             goto ERROR;
         }
 
@@ -356,7 +359,7 @@ static json *parse_number(json_parser *parser)
 
         if (!isdigit(json_peek(parser)))
         {
-            parser->error = JSON_ERROR_INVALID_NUM_FORMAT;
+            SET_PARSER_ERROR(parser, JSON_ERROR_INVALID_NUM_FORMAT);
             goto ERROR;
         }
 
@@ -408,7 +411,7 @@ static json *parse_string(json_parser *parser)
             {
                 if ((c = escaped_chars2actual(parser)) < 0)
                 {
-                    parser->error = JSON_ERROR_INVALID_ESCAPE_SEQUENCE;
+                    SET_PARSER_ERROR(parser, JSON_ERROR_INVALID_JSON);
                     goto ERROR;
                 }
             }
@@ -419,13 +422,13 @@ static json *parse_string(json_parser *parser)
         if (c != '"')
         {
             if (c == '\0')
-                parser->error = JSON_ERROR_UNBALANCED_QUOTE;
+                SET_PARSER_ERROR(parser, JSON_ERROR_UNBALANCED_QUOTE);
             else if (IS_CONTROL_CHAR(c))
-                parser->error = JSON_ERROR_STRING_HAS_CONTROL_CHAR;
+                SET_PARSER_ERROR(parser, JSON_ERROR_STRING_HAS_CONTROL_CHAR);
             else if (c == -1)
             { /* do nothing */ }
             else
-                parser->error = JSON_ERROR_INVALID_STRING;
+                SET_PARSER_ERROR(parser, JSON_ERROR_INVALID_STRING);
             goto ERROR;
         }
         
@@ -435,7 +438,7 @@ static json *parse_string(json_parser *parser)
     }
     else 
     {
-        parser->error = JSON_ERROR_INVALID_JSON;
+        SET_PARSER_ERROR(parser, JSON_ERROR_INVALID_JSON);
     }
 
 ERROR:
@@ -468,7 +471,7 @@ static json *parse_array(json_parser *parser)
 
         if (json_peek(parser) == '\0')
         {
-            parser->error = JSON_ERROR_UNBALANCED_SQUARE_BRACKET;
+            SET_PARSER_ERROR(parser, JSON_ERROR_UNBALANCED_SQUARE_BRACKET);
             goto ERROR;
         }
 
@@ -485,7 +488,7 @@ static json *parse_array(json_parser *parser)
 
         if (c != ']')
         {
-            parser->error = JSON_ERROR_UNBALANCED_SQUARE_BRACKET;
+            SET_PARSER_ERROR(parser, JSON_ERROR_UNBALANCED_SQUARE_BRACKET);
             goto ERROR;
         }
         
@@ -493,7 +496,7 @@ static json *parse_array(json_parser *parser)
     }
     else
     {
-        parser->error = JSON_ERROR_INVALID_JSON;
+        SET_PARSER_ERROR(parser, JSON_ERROR_INVALID_JSON);
     }
 
 ERROR:
@@ -546,7 +549,7 @@ static obj_pair *parse_pair(json_parser *parser)
     }
     else
     {
-        parser->error = JSON_ERROR_INVALID_JSON;
+        SET_PARSER_ERROR(parser, JSON_ERROR_INVALID_JSON);
     }   
 
 ERROR:
@@ -590,7 +593,7 @@ static json *parse_object(json_parser *parser)
 
         if (c != '}')
         {
-            parser->error = JSON_ERROR_UNBALANCED_BRACE;
+            SET_PARSER_ERROR(parser, JSON_ERROR_UNBALANCED_BRACE);
             goto ERROR;
         }
 
@@ -598,7 +601,7 @@ static json *parse_object(json_parser *parser)
     }
     else
     {
-        parser->error = JSON_ERROR_INVALID_JSON;
+        SET_PARSER_ERROR(parser, JSON_ERROR_INVALID_JSON);
     }
 
 ERROR:
