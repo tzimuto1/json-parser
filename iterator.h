@@ -1,7 +1,7 @@
 #ifndef ITERATOR_H
 #define ITERATOR_H
 
-#include "utf8proc/utf8proc.h"
+#include "utf8proc.h"
 #include "parser.h"
 
 #define BYTES_PER_UNICODE_CHAR    4

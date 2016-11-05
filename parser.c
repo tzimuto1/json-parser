@@ -632,23 +632,36 @@ json_output *json_parse(const char *json_string)
 
     output = json_output_new();
 
+    // error on null string since it's not valid JSON
     if (!json_string)
+    {
+        output->error = JSON_ERROR_EMPTY_INPUT;
         return output;
-
-    //PRINTLN("Parsing string: %s", json_string);
+    }
 
     json_parser_init(&parser, json_string);
+
+    // error on 'empty' input since it's not valid JSON
+    if (json_peek(&parser) == '\0')
+    {
+        output->error = JSON_ERROR_EMPTY_INPUT;
+        return output;
+    }
 
     output->root = parse_value(&parser);
     output->error = parser.error;
 
     // unhandled error cases
-    if (output->error == JSON_ERROR_NONE && json_next(&parser) != '\0')
+    if (output->error == JSON_ERROR_NONE)
     {
-        output->error = JSON_ERROR_INVALID_JSON;
+        if (json_peek(&parser) != '\0' || !output->root)
+        {
+            json_destroy(output->root);
+            output->root = NULL;
+            output->error = JSON_ERROR_INVALID_JSON;
+        }
     }
-
-    if (output->error)
+    else
     {
         json_destroy(output->root);
         output->root = NULL;
@@ -757,6 +770,8 @@ const char *json_parser_get_error(json_output *jo)
     {
         case JSON_ERROR_NONE:
             return "No error";
+        case JSON_ERROR_EMPTY_INPUT:
+            return "Empty or null input";
         case JSON_ERROR_INVALID_JSON:
             return "JSON is invalid";
         case JSON_ERROR_UNBALANCED_BRACE:

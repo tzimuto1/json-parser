@@ -10,6 +10,7 @@ typedef enum json_error
 {
     // the input string should be defined
     JSON_ERROR_NONE,
+    JSON_ERROR_EMPTY_INPUT,
     JSON_ERROR_INVALID_JSON, // quite generic
     JSON_ERROR_UNBALANCED_BRACE,
     JSON_ERROR_MISSING_OBJ_COLON,

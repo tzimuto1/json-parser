@@ -48,7 +48,7 @@ TEST(parserTest, null_input)
 
     ASSERT_NE((json_output *) NULL, output); // TODO find why we need the cast
     ASSERT_EQ(NULL, output->root);
-    ASSERT_EQ(0, output->error);
+    ASSERT_EQ(JSON_ERROR_EMPTY_INPUT, output->error);
 
     json_output_destroy(output);
 }
@@ -61,7 +61,7 @@ TEST(parserTest, empty_input)
 
     ASSERT_NE((json_output *) NULL, output);
     ASSERT_EQ(NULL, output->root);
-    ASSERT_EQ(JSON_ERROR_NONE, output->error);
+    ASSERT_EQ(JSON_ERROR_EMPTY_INPUT, output->error);
 
     json_output_destroy(output);
 }
@@ -72,7 +72,7 @@ TEST(parserTest, white_space_test)
     const char  *json_str = "\t\n\r ";
     json_output *output = json_parse(json_str);
 
-    ASSERT_EQ(JSON_ERROR_NONE, output->error);
+    ASSERT_EQ(JSON_ERROR_EMPTY_INPUT, output->error);
     json_output_destroy(output);
 
     // clasified as whitespace but not allowed outside of strings in JSON
@@ -99,7 +99,6 @@ TEST(parserTest, general_primitives)
     for ( i = 0; i < num_prims; i++)
     {
         json res = results[i];
-
         output = json_parse(primitives[i]);
         ASSERT_TRUE(NULL != output->root);
         ASSERT_EQ(JSON_ERROR_NONE, output->error);
