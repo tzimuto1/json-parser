@@ -1,8 +1,12 @@
-CFLAGS=-Wall -g -DDEBUG
+CFLAGS=-Wall -g
+#-DDEBUG
 objects = parser.o json.o iterator.o
 
-all : $(objects)
-	gcc -o tson parser.o json.o iterator.o -lm
+all : libtson.a 
+
+libtson.a : $(objects) utf8proc/utf8proc.o
+	rm -fr libtson.a
+	$(AR) rs libtson.a $^ 
 
 parser.o : parser.h
 
@@ -10,7 +14,11 @@ json.o : json.h
 
 iterator.o : iterator.h
 
-.PHONY : clean
+utf8proc/utf8proc.o : 
+	make -C utf8proc utf8proc.o
+
+.PHONY : clean all
+
 clean :
-	-rm *.o tson
+	-rm -f *.o *.a
 	

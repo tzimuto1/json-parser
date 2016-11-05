@@ -3,7 +3,6 @@
 
 #include <stdbool.h>
 #include "json.h"
-#include "utf8proc/utf8proc.h"
 
 #define JSON_PARSER_MAX_DEPTH      512
 
@@ -26,13 +25,6 @@ typedef enum json_error
     ERROR_MEMORY,
 } json_error;
 
-/* the parser output returned to the user */
-typedef struct 
-{
-    json *root;
-    int   error;
-} json_output;
-
 /* parser object */
 typedef struct json_parser 
 {
@@ -46,10 +38,6 @@ typedef struct json_parser
     int           error;
     int           depth;
 } json_parser;
-
-
-json_output *json_parse(const char *json_string);
-void         json_output_destroy(json_output *jo);
 
 #endif // PARSER_H
 

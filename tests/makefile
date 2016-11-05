@@ -60,32 +60,24 @@ gtest_main.a : gtest-all.o gtest_main.o
 # gtest_main.a, depending on whether it defines its own main()
 # function.
 
-iterator.o : $(USER_DIR)/iterator.c $(USER_DIR)/iterator.h $(GTEST_HEADERS)
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_DIR)/iterator.c
-
-
-json.o : $(USER_DIR)/json.c $(USER_DIR)/json.h $(GTEST_HEADERS)
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_DIR)/json.c
-
-parser.o : $(USER_DIR)/parser.c $(USER_DIR)/parser.h $(GTEST_HEADERS)
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_DIR)/parser.c
-
-
 iterator_test.o : iterator_test.cpp $(GTEST_HEADERS)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c iterator_test.cpp
 
-iterator_test : iterator_test.o iterator.o gtest_main.a
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $^ $(USER_DIR)/utf8proc/libutf8proc.a -o $@
+iterator_test : iterator_test.o gtest_main.a $(USER_DIR)/libtson.a
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $^ -o $@
 
 parser_test.o : parser_test.cpp $(GTEST_HEADERS)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c parser_test.cpp
 
-parser_test : parser_test.o parser.o json.o iterator.o gtest_main.a 
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $^ $(USER_DIR)/utf8proc/libutf8proc.a -o $@
+$(USER_DIR)/libtson.a :
+	make -C $(USER_DIR)
+
+parser_test : parser_test.o gtest_main.a $(USER_DIR)/libtson.a
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $^ -o $@
 
 
 json_api_test.o : json_api_test.cpp $(USER_DIR)/json.h $(GTEST_HEADERS)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c json_api_test.cpp
 
-json_api_test : json_api_test.o parser.o json.o iterator.o gtest_main.a
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $^ $(USER_DIR)/utf8proc/libutf8proc.a -o $@
+json_api_test : json_api_test.o gtest_main.a $(USER_DIR)/libtson.a
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $^  -o $@

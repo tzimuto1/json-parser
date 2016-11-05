@@ -1,6 +1,8 @@
 #include "gtest/gtest.h"
-#include "parser.h"
-#include "iterator.h"
+
+extern "C" {
+    #include "iterator.h"
+}
 
 void *memdup(const void *src, size_t n)
 {

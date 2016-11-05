@@ -67,6 +67,13 @@ typedef struct json_obj_iter {
     int   idx;
 } json_obj_iter;
 
+/* the parser output returned to the user */
+typedef struct 
+{
+    json *root;
+    int   error;
+} json_output;
+
 // TODO consolidate string not found and number not found
 typedef enum api_error
 {
@@ -157,5 +164,8 @@ void    json_array_remove_at(json *array, int idx);
 void    json_array_remove_number(json *array, double number);
 void    json_array_remove_boolean(json *array, bool bool_val);
 void    json_array_remove_string(json *array, const char *str_val);
+
+json_output *json_parse(const char *json_string);
+void         json_output_destroy(json_output *jo);
 
 #endif // JSON_H

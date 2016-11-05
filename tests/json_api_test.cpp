@@ -1,6 +1,9 @@
 #include "gtest/gtest.h"
-#include "parser.h"
-#include "json.h"
+
+extern "C" {
+    #include "iterator.h"
+}
+
 
 // TODO: we need a fixture class so that we do not repeat some of the code e.g
 // json_output_destroy

@@ -21,8 +21,8 @@ value = string | number | object | array | true | false | null
 #include <string.h>
 #include <stdbool.h>
 
-#include "parser.h"
 #include "json.h"
+#include "parser.h"
 #include "iterator.h"
 #include "utils.h"
 
