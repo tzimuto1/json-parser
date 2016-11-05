@@ -85,7 +85,7 @@ TEST(json_object_put_numberTest, basic_update)
     ASSERT_TRUE(js == NULL);
 
     rv = json_object_put_number(object, test_key, test_num);
-    ASSERT_EQ(API_ERROR_NONE, rv);
+    ASSERT_EQ(API_SUCCESS, rv);
 
     js = json_object_get(object, test_key);
     ASSERT_TRUE(JSON_IS_NUMBER(js));
@@ -109,7 +109,7 @@ TEST(json_object_put_numberTest, existing_value)
     ASSERT_EQ(2, json_get_size(object));
 
     rv = json_object_put_number(object, test_key, test_num);
-    ASSERT_EQ(API_ERROR_NONE, rv);
+    ASSERT_EQ(API_SUCCESS, rv);
 
     js = json_object_get(object, test_key);
     ASSERT_TRUE(JSON_IS_NUMBER(js));
@@ -132,7 +132,7 @@ TEST(json_object_put_booleanTest, basic_update)
     ASSERT_FALSE(json_object_has_boolean(object, test_bool));
 
     rv = json_object_put_boolean(object, test_key, test_bool);
-    ASSERT_EQ(API_ERROR_NONE, rv);
+    ASSERT_EQ(API_SUCCESS, rv);
 
     EXPECT_TRUE(json_object_has_key(object, test_key));
     EXPECT_TRUE(json_object_has_boolean(object, test_bool));
@@ -148,14 +148,14 @@ TEST(json_object_put_stringTest, basic_update)
     json        *object = output->root;
 
     rv = json_object_put_string(object, "value", NULL);
-    ASSERT_EQ(API_ERROR_VALUE_INVALID, rv);
+    ASSERT_EQ(API_FAILURE, rv);
 
     rv = json_object_put_string(object, "value", "Hello World!");
-    ASSERT_EQ(API_ERROR_NONE, rv);
+    ASSERT_EQ(API_SUCCESS, rv);
     ASSERT_TRUE(json_object_has_string(object, "Hello World!"));
 
     rv = json_object_put_string(object, "value2", "Executing...");
-    ASSERT_EQ(API_ERROR_NONE, rv);
+    ASSERT_EQ(API_SUCCESS, rv);
     ASSERT_TRUE(json_object_has_string(object, "Executing..."));
 
     json_output_destroy(output);
@@ -227,12 +227,12 @@ TEST(json_object_get_numberTest, basic)
     json_output *output = json_parse(json_str);
     json        *object = output->root;     
 
-    ASSERT_EQ(API_ERROR_INPUT_INVALID, json_object_get_number(object, "pi", NULL));
+    ASSERT_EQ(API_FAILURE, json_object_get_number(object, "pi", NULL));
 
-    ASSERT_EQ(API_ERROR_NONE, json_object_get_number(object, "pi", &number));
+    ASSERT_EQ(API_SUCCESS, json_object_get_number(object, "pi", &number));
     ASSERT_EQ(3.14, number);
 
-    ASSERT_EQ(API_ERROR_NOT_FOUND, json_object_get_number(object, "b", &number));
+    ASSERT_EQ(API_FAILURE, json_object_get_number(object, "b", &number));
     
     json_output_destroy(output);
 }
@@ -244,12 +244,12 @@ TEST(json_object_get_booleanTest, basic)
     json_output *output = json_parse(json_str);
     json        *object = output->root;     
 
-    ASSERT_EQ(API_ERROR_INPUT_INVALID, json_object_get_boolean(object, "b", NULL));
+    ASSERT_EQ(API_FAILURE, json_object_get_boolean(object, "b", NULL));
 
-    ASSERT_EQ(API_ERROR_NONE, json_object_get_boolean(object, "b", &bool_val));
+    ASSERT_EQ(API_SUCCESS, json_object_get_boolean(object, "b", &bool_val));
     ASSERT_EQ(true, bool_val);
 
-    ASSERT_EQ(API_ERROR_NOT_FOUND, json_object_get_boolean(object, "pi", &bool_val));
+    ASSERT_EQ(API_FAILURE, json_object_get_boolean(object, "pi", &bool_val));
     
     json_output_destroy(output);
 }
@@ -261,12 +261,12 @@ TEST(json_object_get_stringTest, basic)
     json_output *output = json_parse(json_str);
     json        *object = output->root;     
 
-    ASSERT_EQ(API_ERROR_INPUT_INVALID, json_object_get_string(object, "b", NULL));
+    ASSERT_EQ(API_FAILURE, json_object_get_string(object, "b", NULL));
 
-    ASSERT_EQ(API_ERROR_NONE, json_object_get_string(object, "str", &str_val));
+    ASSERT_EQ(API_SUCCESS, json_object_get_string(object, "str", &str_val));
     ASSERT_STREQ("Hello World", str_val);
 
-    ASSERT_EQ(API_ERROR_NOT_FOUND, json_object_get_string(object, "b", &str_val));
+    ASSERT_EQ(API_FAILURE, json_object_get_string(object, "b", &str_val));
     
     json_output_destroy(output);
 }
@@ -391,12 +391,12 @@ TEST(json_array_get_numberTest, basic)
     json_output *output = json_parse(json_str);
     json        *array = output->root;     
 
-    ASSERT_EQ(API_ERROR_INPUT_INVALID, json_array_get_number(array, 0, NULL));
+    ASSERT_EQ(API_FAILURE, json_array_get_number(array, 0, NULL));
 
-    ASSERT_EQ(API_ERROR_NONE, json_array_get_number(array, 0, &number));
+    ASSERT_EQ(API_SUCCESS, json_array_get_number(array, 0, &number));
     ASSERT_EQ(3.14, number);
 
-    ASSERT_EQ(API_ERROR_NOT_FOUND, json_array_get_number(array, 1, &number));
+    ASSERT_EQ(API_FAILURE, json_array_get_number(array, 1, &number));
     
     json_output_destroy(output);
 }
@@ -408,12 +408,12 @@ TEST(json_array_get_booleanTest, basic)
     json_output *output = json_parse(json_str);
     json        *array = output->root;     
 
-    ASSERT_EQ(API_ERROR_INPUT_INVALID, json_array_get_boolean(array, 0, NULL));
+    ASSERT_EQ(API_FAILURE, json_array_get_boolean(array, 0, NULL));
 
-    ASSERT_EQ(API_ERROR_NONE, json_array_get_boolean(array, 1, &bool_val));
+    ASSERT_EQ(API_SUCCESS, json_array_get_boolean(array, 1, &bool_val));
     ASSERT_EQ(true, bool_val);
 
-    ASSERT_EQ(API_ERROR_NOT_FOUND, json_array_get_boolean(array, 0, &bool_val));
+    ASSERT_EQ(API_FAILURE, json_array_get_boolean(array, 0, &bool_val));
     
     json_output_destroy(output);
 }
@@ -425,12 +425,12 @@ TEST(json_array_get_stringTest, basic)
     json_output *output = json_parse(json_str);
     json        *array = output->root;     
 
-    ASSERT_EQ(API_ERROR_INPUT_INVALID, json_array_get_string(array, 0, NULL));
+    ASSERT_EQ(API_FAILURE, json_array_get_string(array, 0, NULL));
 
-    ASSERT_EQ(API_ERROR_NONE, json_array_get_string(array, 0, &str_val));
+    ASSERT_EQ(API_SUCCESS, json_array_get_string(array, 0, &str_val));
     ASSERT_STREQ("Hello World", str_val);
 
-    ASSERT_EQ(API_ERROR_NOT_FOUND, json_array_get_string(array, 1, &str_val));
+    ASSERT_EQ(API_FAILURE, json_array_get_string(array, 1, &str_val));
     
     json_output_destroy(output);
 }
@@ -444,13 +444,13 @@ TEST(json_array_add_numberTest, basic)
 
     // replace another number
     rv = json_array_add_number(array, 1, 3.14);
-    ASSERT_EQ(API_ERROR_NONE, rv);
+    ASSERT_EQ(API_SUCCESS, rv);
     ASSERT_EQ(JSON_TYPE_NUMBER, array->elements[1]->type);
     ASSERT_EQ(3.14, array->elements[1]->num_val);
 
     // replacing a non number
     rv = json_array_add_number(array, 2, 6.28);
-    ASSERT_EQ(API_ERROR_NONE, rv);
+    ASSERT_EQ(API_SUCCESS, rv);
     ASSERT_EQ(JSON_TYPE_NUMBER, array->elements[2]->type);
     ASSERT_EQ(6.28, array->elements[2]->num_val);
 
@@ -465,7 +465,7 @@ TEST(json_array_add_booleanTest, basic)
     json        *array = output->root;
 
     rv = json_array_add_boolean(array, 1, false);
-    ASSERT_EQ(API_ERROR_NONE, rv);
+    ASSERT_EQ(API_SUCCESS, rv);
     ASSERT_EQ(JSON_TYPE_BOOLEAN, array->elements[2]->type);
     ASSERT_EQ(true, array->elements[2]->bool_val);
 
@@ -481,7 +481,7 @@ TEST(json_array_add_stringTest, basic)
     json        *array = output->root;
 
     rv = json_array_add_string(array, 1, str_val);
-    ASSERT_EQ(API_ERROR_NONE, rv);
+    ASSERT_EQ(API_SUCCESS, rv);
     ASSERT_EQ(JSON_TYPE_STRING, array->elements[1]->type);
     ASSERT_STREQ(str_val, (char *) array->elements[1]->string_val);
     ASSERT_EQ(strlen(str_val) + 1, json_get_size(array->elements[1]));

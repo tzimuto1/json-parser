@@ -654,6 +654,8 @@ json_output *json_parse(const char *json_string)
         output->root = NULL;
     }
 
+    output->buffer_idx = parser.buffer_idx;
+
     json_parser_destroy(&parser);
     return output;
 }
@@ -683,6 +685,7 @@ static json_output *json_output_new()
     output = (json_output *) calloc(1, sizeof(json_output));
     output->root  = NULL;
     output->error = 0;
+    output->buffer_idx = 0;
     return output;
 }
 
@@ -721,10 +724,64 @@ static void arr_realloc(json *js)
     }
 }
 
+/*
+ * Feee memory within json_output
+ */
 void json_output_destroy(json_output *jo)
 {
     json_destroy(jo->root);
     free(jo);
 }
 
+/*
+ * Return true if a parsing error happened
+ */
+bool json_parser_found_error(json_output *jo)
+{
+    return jo->error != 0;
+}
 
+int json_parser_get_error_loc(json_output *jo)
+{
+    return jo->error ? jo->buffer_idx : 0;
+}
+
+const char *json_parser_get_error(json_output *jo)
+{
+    if (jo->error < 0)
+    {
+        return utf8proc_errmsg(jo->error);
+    }
+
+    switch (jo->error) 
+    {
+        case JSON_ERROR_NONE:
+            return "No error";
+        case JSON_ERROR_INVALID_JSON:
+            return "JSON is invalid";
+        case JSON_ERROR_UNBALANCED_BRACE:
+            return "Unbalanced brace";
+        case JSON_ERROR_MISSING_OBJ_COLON:
+            return "Missing object colon";
+        case JSON_ERROR_INVALID_STRING:
+            return "Invalid string";
+        case JSON_ERROR_UNBALANCED_SQUARE_BRACKET:
+            return "Unbalanced square bracket";
+        case JSON_ERROR_UNBALANCED_QUOTE:
+            return "Unbalanced string quote";
+        case JSON_ERROR_INVALID_ESCAPE_SEQUENCE:
+            return "Invalid escape sequence";
+        case JSON_ERROR_INVALID_UNICODE_ESCAPE_SEQUENCE:
+            return "Invalid unicode escape sequence";
+        case JSON_ERROR_STRING_HAS_CONTROL_CHAR:
+            return "String has unescaped control character";
+        case JSON_ERROR_INVALID_NUM_FORMAT:
+            return "Invalid number format";
+        case JSON_ERROR_PARSER_MAX_DEPTH_EXCEEDED:
+            return "Parser max depth exceeded";
+        case JSON_ERROR_ILLEGAL_CHARACTER:
+            return "Illegal character encountered";
+        default:
+            return "Unknown error happened in the parser";
+    }
+}

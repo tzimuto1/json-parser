@@ -72,20 +72,12 @@ typedef struct
 {
     json *root;
     int   error;
+    int   buffer_idx;
 } json_output;
 
-// TODO consolidate string not found and number not found
-typedef enum api_error
-{
-    API_ERROR_NONE,
-    API_ERROR_NOT_OBJECT,
-    API_ERROR_NOT_ARRAY,
-    API_ERROR_KEY_NOT_FOUND,
-    API_ERROR_KEY_INVALID,
-    API_ERROR_NOT_FOUND,
-    API_ERROR_VALUE_INVALID,
-    API_ERROR_INPUT_INVALID,
-} api_error;
+
+#define API_SUCCESS    0
+#define API_FAILURE    1
 
 
 /* json2string handling */
@@ -116,7 +108,7 @@ char *json2string(json *js, int indent);
 /* object APIs */
 struct json_obj_iter json_obj_iter_init(json *object);
 obj_pair *json_obj_next(json_obj_iter *it);
-#define json_obj_end(it)  _json_obj_end()
+#define  json_obj_end(it)  _json_obj_end()
 obj_pair *_json_obj_end();
 
 bool    json_object_has_key(json *object, const char *key);
@@ -126,8 +118,8 @@ bool    json_object_has_string(json *object, const char *string);
 
 json    *json_object_get(json *object, const char *key);
 json    **json_object_get_all(json *object);
-api_error json_object_get_number(json *object, const char *key, double *number);
-api_error json_object_get_boolean(json *object, const char *key, bool *bool_val);
+int     json_object_get_number(json *object, const char *key, double *number);
+int     json_object_get_boolean(json *object, const char *key, bool *bool_val);
 
 int     json_object_put_number(json *object, const char *key, double number);
 int     json_object_put_boolean(json *object, const char *key, bool bool_val);
@@ -135,18 +127,18 @@ int     json_object_put_string(json *object, const char *key, const char *str_va
 int     json_object_put_complex_value(json *object, const char *key, json *value);
 
 void    json_object_remove_member(json *object, const char *key);
-api_error json_object_get_string(json *object, const char *key, char **str_val);
+int     json_object_get_string(json *object, const char *key, char **str_val);
 
 /* array APIs */
 bool    json_array_has_number(json *array, double number);
 bool    json_array_has_boolean(json *array, bool bool_val);
 bool    json_array_has_string(json *array, const char *string);
 
-json      *json_array_get(json *array, int idx);
-api_error json_array_get_number(json *array, int idx, double *number);
-api_error json_array_get_boolean(json *array, int idx, bool *bool_val);
-api_error json_array_get_string(json *array, int idx, char **str_val);
-json      **json_array_get_elements(json *array);
+json    *json_array_get(json *array, int idx);
+int     json_array_get_number(json *array, int idx, double *number);
+int     json_array_get_boolean(json *array, int idx, bool *bool_val);
+int     json_array_get_string(json *array, int idx, char **str_val);
+json    **json_array_get_elements(json *array);
 
 int     json_array_index_of_number(json *array, double number);
 int     json_array_index_of_boolean(json *array, bool bool_val);
@@ -165,7 +157,11 @@ void    json_array_remove_number(json *array, double number);
 void    json_array_remove_boolean(json *array, bool bool_val);
 void    json_array_remove_string(json *array, const char *str_val);
 
+/* PARSER APIs */
 json_output *json_parse(const char *json_string);
 void         json_output_destroy(json_output *jo);
+bool         json_parser_found_error(json_output *jo);
+const char  *json_parser_get_error(json_output *jo);
+int          json_parser_get_error_loc(json_output *jo);
 
 #endif // JSON_H

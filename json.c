@@ -13,17 +13,17 @@
 /* static function declarations */
 static bool json_is_equal(json *js, const void *val, json_type type);
 static void json_shallow_copy(json *js, const void *val_ptr, json_type type);
-static int _json2string(json *js, string_buf *buf, int indent);
+static int  _json2string(json *js, string_buf *buf, int indent);
 static void string_buf_append(string_buf *buf, const char *fmt, ...);
 static unsigned char *string2escaped_string(const unsigned char *str);
 
 static void pair_destroy(obj_pair *pair);
-static api_error json_object_generic_get(json *object, const char *key, void *val_ptr, json_type type);
+static int  json_object_generic_get(json *object, const char *key, void *val_ptr, json_type type);
 static bool json_object_has_value(json *object, const void *val, json_type type);
 static int  json_object_generic_put(json *object, const char *key, const void *val, json_type type);
 
 static int  json_array_index_of(json *array, const void *val, json_type type);
-static api_error json_array_generic_get(json *array, int idx, void *val_ptr, json_type type);
+static int  json_array_generic_get(json *array, int idx, void *val_ptr, json_type type);
 static int  json_array_generic_add(json *array, int idx, json_type type, const void *val);
 static void json_array_append(json *array, const void *val, json_type type);
 static void json_array_remove_element(json *array, const void *elem, json_type type);
@@ -319,11 +319,11 @@ static void string_buf_append(string_buf *buf, const char *fmt, ...)
 
 static int _json2string(json *js, string_buf *buf, int indent)
 {
-    int ret = API_ERROR_NONE;
+    int ret = API_SUCCESS;
 
     if (!js)
     {
-        return API_ERROR_INPUT_INVALID;
+        return API_FAILURE;
     }
 
     switch (js->type)
@@ -341,15 +341,15 @@ static int _json2string(json *js, string_buf *buf, int indent)
             {
                 if (!(escaped_key = string2escaped_string(pair->key)))
                 {
-                    return API_ERROR_INPUT_INVALID;
+                    return API_FAILURE;
                 }
 
                 string_buf_append(buf, "\"%s\":", escaped_key);
                 free(escaped_key);
 
-                if (_json2string(pair->value, buf, indent) != API_ERROR_NONE)
+                if (_json2string(pair->value, buf, indent) != API_SUCCESS)
                 {
-                    return API_ERROR_INPUT_INVALID;
+                    return API_FAILURE;
                 }
                 string_buf_append(buf, "%s", ", ");
             }
@@ -369,9 +369,9 @@ static int _json2string(json *js, string_buf *buf, int indent)
 
             for (i = 0; i < json_get_size(js); i++)
             {
-                if (_json2string(js->elements[i], buf, indent) != API_ERROR_NONE)
+                if (_json2string(js->elements[i], buf, indent) != API_SUCCESS)
                 {
-                    return API_ERROR_INPUT_INVALID;
+                    return API_FAILURE;
                 }
                 string_buf_append(buf, "%s", ", ");
             }
@@ -388,7 +388,7 @@ static int _json2string(json *js, string_buf *buf, int indent)
             unsigned char *escaped_str = NULL;
             if (!(escaped_str = string2escaped_string(js->string_val)))
             {
-                return API_ERROR_INPUT_INVALID;
+                return API_FAILURE;
             }
             string_buf_append(buf, "\"%s\"", escaped_str);
             free(escaped_str);
@@ -404,7 +404,7 @@ static int _json2string(json *js, string_buf *buf, int indent)
             string_buf_append(buf, "%s", "null");
             break;
         default:
-            ret = API_ERROR_INPUT_INVALID;
+            ret = API_FAILURE;
             break;
     }
 
@@ -421,7 +421,7 @@ char *json2string(json *js, int indent)
     buf.alloced = 256;
     buf.string = (char *) malloc(sizeof(char) * buf.alloced);
 
-    if (_json2string(js, &buf, indent) != API_ERROR_NONE)
+    if (_json2string(js, &buf, indent) != API_SUCCESS)
     {
         free(buf.string);
         return NULL;
@@ -570,13 +570,13 @@ json **json_object_get_all(json *object)
 }
 
 
-static api_error json_object_generic_get(json *object, const char *key, void *val_ptr, json_type type)
+static int json_object_generic_get(json *object, const char *key, void *val_ptr, json_type type)
 {
     int i = 0;
 
     if (!JSON_IS_OBJECT(object) || !key || !val_ptr)
     {
-        return API_ERROR_INPUT_INVALID;
+        return API_FAILURE;
     }
 
     for (i = 0; i < object->cnt; i++)
@@ -585,17 +585,17 @@ static api_error json_object_generic_get(json *object, const char *key, void *va
             && (strcmp(key, (char *) object->members[i]->key) == 0))
         {
             json_shallow_copy(object->members[i]->value, val_ptr, type);
-            return API_ERROR_NONE;
+            return API_SUCCESS;
         }
     }
 
-    return API_ERROR_NOT_FOUND;
+    return API_FAILURE;
 }
 
 /*
  * Get the number corresponding to given key
  */
-api_error json_object_get_number(json *object, const char *key, double *number)
+int json_object_get_number(json *object, const char *key, double *number)
 {
     return json_object_generic_get(object, key, number, JSON_TYPE_NUMBER);
 }
@@ -603,7 +603,7 @@ api_error json_object_get_number(json *object, const char *key, double *number)
 /*
  * Get the boolean corresponding to given key
  */
-api_error json_object_get_boolean(json *object, const char *key, bool *bool_val)
+int json_object_get_boolean(json *object, const char *key, bool *bool_val)
 {
     return json_object_generic_get(object, key, bool_val, JSON_TYPE_BOOLEAN);
 }
@@ -612,7 +612,7 @@ api_error json_object_get_boolean(json *object, const char *key, bool *bool_val)
 /*
  * Get the string corresponding to given key
  */
-api_error json_object_get_string(json *object, const char *key, char **str_val)
+int json_object_get_string(json *object, const char *key, char **str_val)
 {
     return json_object_generic_get(object, key, str_val, JSON_TYPE_STRING);
 }
@@ -622,21 +622,10 @@ static int json_object_generic_put(json *object, const char *key, const void *va
 {
     int       i = 0;
     obj_pair *pair = NULL;
-
-    // TODO error handling a mess
-    if (!JSON_IS_OBJECT(object))
+    
+    if (!JSON_IS_OBJECT(object) || !key || !val)
     {
-        return API_ERROR_NOT_OBJECT; // should be input invalid maybe
-    }
-
-    if (!key)
-    {
-        return API_ERROR_KEY_INVALID;
-    }
-
-    if (!val)
-    {
-        return API_ERROR_VALUE_INVALID;
+        return API_FAILURE;
     }
 
     for (i = 0; i < object->cnt; i++)
@@ -645,7 +634,7 @@ static int json_object_generic_put(json *object, const char *key, const void *va
         {
             json_destroy(object->members[i]->value);
             object->members[i]->value = json_full_create(type, val);
-            return API_ERROR_NONE;
+            return API_SUCCESS;
         }
     }
 
@@ -670,7 +659,7 @@ static int json_object_generic_put(json *object, const char *key, const void *va
     }
 
     object->members[object->cnt++] = pair;
-    return API_ERROR_NONE;
+    return API_SUCCESS;
 }
 
 /*
@@ -706,7 +695,7 @@ int json_object_put_complex_value(json *object, const char *key, json *value)
 {
     if (!JSON_IS_COMPLEX(value))
     {
-        return API_ERROR_VALUE_INVALID;
+        return API_FAILURE;
     }
     return json_object_generic_put(object, key, value, value->type);
 }
@@ -804,27 +793,27 @@ json *json_array_get(json *array, int idx)
 }
 
 
-static api_error json_array_generic_get(json *array, int idx, void *val_ptr, json_type type)
+static int json_array_generic_get(json *array, int idx, void *val_ptr, json_type type)
 {
     if (!JSON_IS_ARRAY(array) 
         || !IDX_WITHIN_BOUNDS(array, idx)
         || !val_ptr)
     {
-        return API_ERROR_INPUT_INVALID;
+        return API_FAILURE;
     }
 
     if (JSON_HAS_TYPE(array->elements[idx], type))
     {
         json_shallow_copy(array->elements[idx], val_ptr, type);
-        return API_ERROR_NONE;
+        return API_SUCCESS;
     }
-    return API_ERROR_NOT_FOUND;
+    return API_FAILURE;
 }
 
 /*
  * Get the number corresponding to given index
  */
-api_error json_array_get_number(json *array, int idx, double *number)
+int json_array_get_number(json *array, int idx, double *number)
 {
     return json_array_generic_get(array, idx, number, JSON_TYPE_NUMBER);
 }
@@ -833,7 +822,7 @@ api_error json_array_get_number(json *array, int idx, double *number)
 /*
  * Get the boolean corresponding to given index
  */
-api_error json_array_get_boolean(json *array, int idx, bool *bool_val)
+int json_array_get_boolean(json *array, int idx, bool *bool_val)
 {
     return json_array_generic_get(array, idx, bool_val, JSON_TYPE_BOOLEAN);
 }
@@ -842,7 +831,7 @@ api_error json_array_get_boolean(json *array, int idx, bool *bool_val)
 /*
  * Get the string corresponding to given index
  */
-api_error json_array_get_string(json *array, int idx, char **str_val)
+int json_array_get_string(json *array, int idx, char **str_val)
 {
     return json_array_generic_get(array, idx, str_val, JSON_TYPE_STRING);
 }
@@ -911,7 +900,7 @@ static int json_array_generic_add(json *array, int idx, json_type type, const vo
     if (!JSON_IS_ARRAY(array) 
         || !IDX_WITHIN_BOUNDS(array, idx))
     {
-        return API_ERROR_INPUT_INVALID;
+        return API_FAILURE;
     }
 
     assert(type > JSON_TYPE_NONE || type < JSON_TYPE_END);
@@ -920,7 +909,7 @@ static int json_array_generic_add(json *array, int idx, json_type type, const vo
     json_destroy(array->elements[idx]); // TODO can we reuse memory instead of deallocating?
     array->elements[idx] = json_full_create(type, val);
 
-    return API_ERROR_NONE;
+    return API_SUCCESS;
 }
 
 /*

@@ -56,9 +56,12 @@ int main(int argc, char const *argv[])
     
     root = output->root;
 
-    if (output->error || !root)
+    if (json_parser_found_error(output))
     {
-        printf("json parsing failed Error code = %d\n", output->error);
+	printf("Error: %s, Near character: %d\n",
+	       json_parser_get_error(output),
+	       json_parser_get_error_loc(output));
+        //printf("json parsing failed Error code = %d\n", output->error);
         exit(EXIT_FAILURE);
     }
 
