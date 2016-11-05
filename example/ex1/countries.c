@@ -7,8 +7,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "../parser.h"
-#include "../json.h"
+#include "../../json.h"
 
 static char *read_file(const char *file_name)
 {
@@ -125,19 +124,13 @@ int main(int argc, char const *argv[])
     
     country_data = read_file(file_name);
     output = json_parse(country_data);
-    free(country_data); // you are excused, thanks!
+    free(country_data);
 
     root = output->root;
 
-    if (output->error)
+    if (json_parser_found_error(output))
     {
         printf("json parsing failed Error code = %d\n", output->error);
-        goto exit;
-    }
-
-    if (!root)
-    {
-        printf("The file is empty\n");
         goto exit;
     }
 
