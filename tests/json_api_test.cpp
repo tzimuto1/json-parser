@@ -484,7 +484,7 @@ TEST(json_array_add_stringTest, basic)
     ASSERT_EQ(API_SUCCESS, rv);
     ASSERT_EQ(JSON_TYPE_STRING, array->elements[1]->type);
     ASSERT_STREQ(str_val, (char *) array->elements[1]->string_val);
-    ASSERT_EQ(strlen(str_val) + 1, json_get_size(array->elements[1]));
+    ASSERT_EQ(strlen(str_val), json_get_size(array->elements[1]));
 
     json_output_destroy(output);
 }

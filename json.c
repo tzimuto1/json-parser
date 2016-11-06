@@ -141,8 +141,10 @@ json *json_full_create(json_type type, const void *val)
             js->bool_val = *(bool *) val;
             break;
         case JSON_TYPE_STRING:
+            free(js->string_val); // TODO: hacky
             js->string_val = (unsigned char *) strdup((char *) val);
-            js->cnt = strlen((char *) js->string_val) + 1;
+            js->cnt = strlen((char *) js->string_val);
+            js->alloced = js->cnt + 1;
             break;
         default:
             break;
