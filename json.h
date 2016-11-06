@@ -120,6 +120,7 @@ json    *json_object_get(json *object, const char *key);
 json    **json_object_get_all(json *object);
 int     json_object_get_number(json *object, const char *key, double *number);
 int     json_object_get_boolean(json *object, const char *key, bool *bool_val);
+int     json_object_get_string(json *object, const char *key, char **str_val);
 
 int     json_object_put_number(json *object, const char *key, double number);
 int     json_object_put_boolean(json *object, const char *key, bool bool_val);
@@ -127,7 +128,6 @@ int     json_object_put_string(json *object, const char *key, const char *str_va
 int     json_object_put_complex_value(json *object, const char *key, json *value);
 
 void    json_object_remove_member(json *object, const char *key);
-int     json_object_get_string(json *object, const char *key, char **str_val);
 
 /* array APIs */
 bool    json_array_has_number(json *array, double number);

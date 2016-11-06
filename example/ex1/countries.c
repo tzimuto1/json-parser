@@ -106,7 +106,7 @@ static void process_countries(json *countries)
     }
     printf("\n\n");
 
-    income_level2countries_obj_str = json2string(income_level2countries_obj, 0);
+    income_level2countries_obj_str = json2string(income_level2countries_obj, 4);
     printf("The income_level2countries_obj string rep is:\n%s\n",
         income_level2countries_obj_str);
 
