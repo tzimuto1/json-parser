@@ -13,7 +13,7 @@
 /* static function declarations */
 static bool json_is_equal(json *js, const void *val, json_type type);
 static void json_shallow_copy(json *js, const void *val_ptr, json_type type);
-static int  _json2string(json *js, string_buf *buf, int indent);
+static int  _json2string(json *js, string_buf *buf, int indent, int level);
 static void string_buf_append(string_buf *buf, const char *fmt, ...);
 static unsigned char *string2escaped_string(const unsigned char *str);
 
@@ -317,14 +317,26 @@ static void string_buf_append(string_buf *buf, const char *fmt, ...)
 
 }
 
-static int _json2string(json *js, string_buf *buf, int indent)
+static int _json2string(json *js, string_buf *buf, int indent, int level)
 {
-    int ret = API_SUCCESS;
+    char  *indent_bytes = NULL;
+    int   ib_len = 0;
+    char  *new_line_str = "", *space_str = "";
 
     if (!js)
     {
         return API_FAILURE;
     }
+
+    level++;
+
+    ib_len = indent * level;
+    indent_bytes = (char *) malloc(sizeof(char) * ib_len + 1);
+    memset(indent_bytes, ' ', ib_len);
+    indent_bytes[ib_len] = '\0';
+
+    new_line_str = (indent > 0) ? "\n" : "";
+    space_str = (indent > 0) ? " " : "";
 
     switch (js->type)
     {
@@ -334,53 +346,67 @@ static int _json2string(json *js, string_buf *buf, int indent)
             obj_pair *pair = NULL;
             unsigned char     *escaped_key = NULL;      
 
-            string_buf_append(buf, "%c", '{');
+            string_buf_append(buf, "{");
+
+            if (json_get_size(js) == 0)
+            {
+                string_buf_append(buf, "}");
+                break;
+            }
 
             it = json_obj_iter_init(js);
             for (pair = json_obj_next(&it); pair != json_obj_end(&it); pair = json_obj_next(&it))
             {
                 if (!(escaped_key = string2escaped_string(pair->key)))
                 {
-                    return API_FAILURE;
+                    goto ERROR;
                 }
 
-                string_buf_append(buf, "\"%s\":", escaped_key);
+                string_buf_append(buf, "%s%s\"%s\":%s",
+                    new_line_str, indent_bytes, escaped_key, space_str);
                 free(escaped_key);
 
-                if (_json2string(pair->value, buf, indent) != API_SUCCESS)
+                if (_json2string(pair->value, buf, indent, level) != API_SUCCESS)
                 {
-                    return API_FAILURE;
+                    goto ERROR;
                 }
-                string_buf_append(buf, "%s", ", ");
+
+                string_buf_append(buf, ",");
             }
 
-            if (json_get_size(js) > 0)
-            {
-                buf->cnt -= 2; // remove ", "
-            }
-            string_buf_append(buf, "%c", '}');
+            buf->cnt -= 1; // remove ","
+
+            string_buf_append(buf, "%s%.*s}", 
+                new_line_str, indent * (level - 1), indent_bytes);
             break;
         }
         case JSON_TYPE_ARRAY:
         {
             int i = 0;
 
-            string_buf_append(buf, "%c", '[');
+            string_buf_append(buf, "[");
+
+            if (json_get_size(js) == 0)
+            {
+                string_buf_append(buf, "]");
+                break;
+            }
 
             for (i = 0; i < json_get_size(js); i++)
             {
-                if (_json2string(js->elements[i], buf, indent) != API_SUCCESS)
+                string_buf_append(buf, "%s%s", new_line_str, indent_bytes);
+
+                if (_json2string(js->elements[i], buf, indent, level) != API_SUCCESS)
                 {
-                    return API_FAILURE;
+                    goto ERROR;
                 }
-                string_buf_append(buf, "%s", ", ");
+
+                string_buf_append(buf, ",");
             }
 
-            if (json_get_size(js) > 0)
-            {
-                buf->cnt -= 2; // remove ", "
-            }
-            string_buf_append(buf, "%c", ']');
+            buf->cnt -= 1; // remove ","
+
+            string_buf_append(buf, "%s%.*s]", new_line_str, indent * (level - 1), indent_bytes);
             break;
         }
         case JSON_TYPE_STRING:
@@ -388,7 +414,7 @@ static int _json2string(json *js, string_buf *buf, int indent)
             unsigned char *escaped_str = NULL;
             if (!(escaped_str = string2escaped_string(js->string_val)))
             {
-                return API_FAILURE;
+                goto ERROR;
             }
             string_buf_append(buf, "\"%s\"", escaped_str);
             free(escaped_str);
@@ -404,11 +430,15 @@ static int _json2string(json *js, string_buf *buf, int indent)
             string_buf_append(buf, "%s", "null");
             break;
         default:
-            ret = API_FAILURE;
             break;
     }
 
-    return ret;
+    free(indent_bytes);
+    return API_SUCCESS;
+
+ERROR:
+    free(indent_bytes);
+    return API_FAILURE;
 }
 
 /*
@@ -421,7 +451,9 @@ char *json2string(json *js, int indent)
     buf.alloced = 256;
     buf.string = (char *) malloc(sizeof(char) * buf.alloced);
 
-    if (_json2string(js, &buf, indent) != API_SUCCESS)
+    indent = indent > 0 ? indent : 0;
+
+    if (_json2string(js, &buf, indent, 0) != API_SUCCESS)
     {
         free(buf.string);
         return NULL;
@@ -622,7 +654,7 @@ static int json_object_generic_put(json *object, const char *key, const void *va
 {
     int       i = 0;
     obj_pair *pair = NULL;
-    
+
     if (!JSON_IS_OBJECT(object) || !key || !val)
     {
         return API_FAILURE;

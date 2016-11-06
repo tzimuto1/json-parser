@@ -668,6 +668,7 @@ TEST(json_array_remove_elementTest, basic)
 typedef struct {
     const char *input_str;
     const char *exp_output_str;
+    int  indent;
 } json_data;
 
 class Json2StringTest : public ::testing::TestWithParam<json_data> {
@@ -687,7 +688,7 @@ TEST_P(Json2StringTest, all_tests)
     {
         ASSERT_NE((json *) NULL, output->root);
 
-        output_str = json2string(output->root, 0);
+        output_str = json2string(output->root, jd.indent);
         ASSERT_STREQ(jd.exp_output_str, output_str);
     }
     else
@@ -703,33 +704,56 @@ INSTANTIATE_TEST_CASE_P(json2stringTests,
     Json2StringTest,
     ::testing::Values(
         // empty string
-        json_data{ "", "" },
+        json_data{ "", "", 0 },
         // lone primitives
-        json_data{ "1.23", "1.230000" },
-        json_data{ "true", "true" },
-        json_data{ "null", "null" },
-        json_data{ "\"string\"", "\"string\"" },
+        json_data{ "1.23", "1.230000", 0 },
+        json_data{ "true", "true", 0 },
+        json_data{ "null", "null", 0 },
+        json_data{ "\"string\"", "\"string\"", 0 },
         // empty array
-        json_data{ "[]", "[]" },
+        json_data{ "[]", "[]", 0 },
         // simple array with integers
-        json_data{ "[1,2,3.14]", "[1.000000, 2.000000, 3.140000]" },
+        json_data{ "[1,2,3.14]", "[1.000000,2.000000,3.140000]", 0 },
         // simple array with booleans
-        json_data{ "[true,false]", "[true, false]" },
+        json_data{ "[true,false]", "[true,false]", 0 },
         // simple array with null
-        json_data{ "[null]", "[null]" },
+        json_data{ "[null]", "[null]", 0 },
         // simple array with strings
-        json_data{ "[\"Hello\",\"World\",\"\"]", "[\"Hello\", \"World\", \"\"]" },
+        json_data{ "[\"Hello\",\"World\",\"\"]", "[\"Hello\",\"World\",\"\"]", 0 },
         // simple array with complex string A"\/\b\f\n\r\tA
-        json_data{ "[\"A\\\"\\\\/\\b\\f\\n\\r\\tA\"]", "[\"A\\\"\\\\\\/\\b\\f\\n\\r\\tA\"]" },
+        json_data{ "[\"A\\\"\\\\/\\b\\f\\n\\r\\tA\"]", 
+            "[\"A\\\"\\\\\\/\\b\\f\\n\\r\\tA\"]", 0 },
         // empty object
-        json_data{ "{}", "{}" },
+        json_data{ "{}", "{}", 0 },
         // object with primitives
         json_data{ "{\"a\":1,\"b\":true,\"c\":null,\"d\":\"string\"}", 
-            "{\"a\":1.000000, \"b\":true, \"c\":null, \"d\":\"string\"}" },
+            "{\"a\":1.000000,\"b\":true,\"c\":null,\"d\":\"string\"}", 0 },
         // nested json values
         json_data{ "{\"a\":1,\"b\":{\"c\":[1,2,3,{\"d\":\"d\"}]}}", 
-            "{\"a\":1.000000, \"b\":{\"c\":[1.000000, 2.000000, 3.000000, {\"d\":\"d\"}]}}" },
+            "{\"a\":1.000000,\"b\":{\"c\":[1.000000,2.000000,3.000000,{\"d\":\"d\"}]}}", 0 },
         // json with unicode
-        json_data{ "[\"TSON \u00a9\"]", "[\"TSON ©\"]"}
+        json_data{ "[\"TSON \u00a9\"]", "[\"TSON ©\"]", 0},
+        // indentation tests
+        json_data{ "[]", "[]", 1},
+        json_data{ "{}", "{}", 4},
+        json_data{ "[1,2,3.14]", "[1.000000,2.000000,3.140000]", -1 },
+        json_data{ "[1,2,3.14]", "[\n 1.000000,\n 2.000000,\n 3.140000\n]", 1 },
+        json_data{ "[1,2,3.14]", "[\n    1.000000,\n    2.000000,\n    3.140000\n]", 4 },
+        json_data{ "{\"a\":1,\"b\":true}", 
+            "{\n \"a\": 1.000000,\n \"b\": true\n}", 1 },
+        json_data{ "[1,{\"k0\":[2,{\"k1\":3},4]},5]", 
+            "[\n"
+            " 1.000000,\n"
+            " {\n"
+            "  \"k0\": [\n"
+            "   2.000000,\n"
+            "   {\n"
+            "    \"k1\": 3.000000\n"
+            "   },\n"
+            "   4.000000\n"
+            "  ]\n"
+            " },\n"
+            " 5.000000\n"
+            "]", 1}
         ));
 
