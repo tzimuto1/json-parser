@@ -531,6 +531,8 @@ static bool json_object_has_value(json *object, const void *val, json_type type)
 
     return false;
 }
+
+
 /*
  * Return true if json object has the number value
  */

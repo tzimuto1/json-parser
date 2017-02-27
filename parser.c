@@ -650,6 +650,7 @@ json_output *json_parse(const char *json_string)
 
     output->root = parse_value(&parser);
     output->error = parser.error;
+    output->buffer_idx = parser.buffer_idx;
 
     // unhandled error cases
     if (output->error == JSON_ERROR_NONE)
@@ -666,8 +667,6 @@ json_output *json_parse(const char *json_string)
         json_destroy(output->root);
         output->root = NULL;
     }
-
-    output->buffer_idx = parser.buffer_idx;
 
     json_parser_destroy(&parser);
     return output;
